@@ -1,0 +1,226 @@
+USE AccountingSystem;
+GO
+
+INSERT INTO Currencies (Code, Name, Symbol) VALUES
+('EUR', 'Euro', '€'),
+('USD', 'US Dollar', '$'),
+('GBP', 'British Pound', '£'),
+('JPY', 'Japanese Yen', '¥'),
+('CAD', 'Canadian Dollar', 'C$'),
+('AUD', 'Australian Dollar', 'A$'),
+('CHF', 'Swiss Franc', 'CHF'),
+('SEK', 'Swedish Krona', 'kr');
+
+
+INSERT INTO Languages (Code, Name, NativeName, IsDefault, IsActive) VALUES
+('ENG', 'English', 'English', 1, 1),
+('ALB', 'Albanian', 'Shqip', 0, 1),
+('SRB', 'Serbian', 'Српски', 0, 1);
+
+
+-- English strings
+INSERT INTO LocalizationStrings (StringKey, LanguageId, Text, Category) VALUES
+('STRING_00001', 1, 'Article Management', 'UI'),
+('STRING_00002', 1, 'New Article', 'UI'),
+('STRING_00003', 1, 'Search articles...', 'UI'),
+('STRING_00004', 1, 'All Categories', 'UI'),
+('STRING_00005', 1, 'Show Inactive', 'UI'),
+('STRING_00006', 1, 'Total Articles', 'UI'),
+('STRING_00007', 1, 'Active Articles', 'UI'),
+('STRING_00008', 1, 'Low Stock', 'UI'),
+('STRING_00009', 1, 'Total Value', 'UI'),
+('STRING_00010', 1, 'Code', 'Labels'),
+('STRING_00011', 1, 'Name', 'Labels'),
+('STRING_00012', 1, 'Category', 'Labels'),
+('STRING_00013', 1, 'Unit', 'Labels'),
+('STRING_00014', 1, 'Price', 'Labels'),
+('STRING_00015', 1, 'VAT Rate', 'Labels'),
+('STRING_00016', 1, 'Stock', 'Labels'),
+('STRING_00017', 1, 'Status', 'Labels'),
+('STRING_00018', 1, 'Actions', 'Labels'),
+('STRING_00019', 1, 'Active', 'Labels'),
+('STRING_00020', 1, 'Inactive', 'Labels'),
+('STRING_00021', 1, 'Edit', 'Actions'),
+('STRING_00022', 1, 'Delete', 'Actions'),
+('STRING_00023', 1, 'View', 'Actions'),
+('STRING_00024', 1, 'Save', 'Actions'),
+('STRING_00025', 1, 'Cancel', 'Actions'),
+('STRING_00026', 1, 'Create Article', 'UI'),
+('STRING_00027', 1, 'Edit Article', 'UI'),
+('STRING_00028', 1, 'Description', 'Labels'),
+('STRING_00029', 1, 'Currency', 'Labels'),
+('STRING_00030', 1, 'Stock Quantity', 'Labels');
+
+-- Albanian strings
+INSERT INTO LocalizationStrings (StringKey, LanguageId, Text, Category) VALUES
+('STRING_00001', 2, 'Menaxhimi i Artikujve', 'UI'),
+('STRING_00002', 2, 'Artikull i Ri', 'UI'),
+('STRING_00003', 2, 'Kërko artikuj...', 'UI'),
+('STRING_00004', 2, 'Të gjitha Kategoritë', 'UI'),
+('STRING_00005', 2, 'Shfaq të Paaktivt', 'UI'),
+('STRING_00006', 2, 'Totali i Artikujve', 'UI'),
+('STRING_00007', 2, 'Artikuj Aktivë', 'UI'),
+('STRING_00008', 2, 'Stok i Ulët', 'UI'),
+('STRING_00009', 2, 'Vlera Totale', 'UI'),
+('STRING_00010', 2, 'Kodi', 'Labels'),
+('STRING_00011', 2, 'Emri', 'Labels'),
+('STRING_00012', 2, 'Kategoria', 'Labels'),
+('STRING_00013', 2, 'Njësia', 'Labels'),
+('STRING_00014', 2, 'Çmimi', 'Labels'),
+('STRING_00015', 2, 'Norma TVSH', 'Labels'),
+('STRING_00016', 2, 'Stoku', 'Labels'),
+('STRING_00017', 2, 'Statusi', 'Labels'),
+('STRING_00018', 2, 'Veprimet', 'Labels'),
+('STRING_00019', 2, 'Aktiv', 'Labels'),
+('STRING_00020', 2, 'Joaktiv', 'Labels'),
+('STRING_00021', 2, 'Redakto', 'Actions'),
+('STRING_00022', 2, 'Fshi', 'Actions'),
+('STRING_00023', 2, 'Shiko', 'Actions'),
+('STRING_00024', 2, 'Ruaj', 'Actions'),
+('STRING_00025', 2, 'Anulo', 'Actions'),
+('STRING_00026', 2, 'Krijo Artikull', 'UI'),
+('STRING_00027', 2, 'Redakto Artikull', 'UI'),
+('STRING_00028', 2, 'Përshkrimi', 'Labels'),
+('STRING_00029', 2, 'Monedha', 'Labels'),
+('STRING_00030', 2, 'Sasia në Stok', 'Labels');
+
+-- Serbian strings (Latin script)
+INSERT INTO LocalizationStrings (StringKey, LanguageId, Text, Category) VALUES
+('STRING_00001', 3, 'Upravljanje Artiklima', 'UI'),
+('STRING_00002', 3, 'Novi Artikal', 'UI'),
+('STRING_00003', 3, 'Pretraži artikle...', 'UI'),
+('STRING_00004', 3, 'Sve Kategorije', 'UI'),
+('STRING_00005', 3, 'Prikaži Neaktivne', 'UI'),
+('STRING_00006', 3, 'Ukupno Artikala', 'UI'),
+('STRING_00007', 3, 'Aktivni Artikli', 'UI'),
+('STRING_00008', 3, 'Male Zalihe', 'UI'),
+('STRING_00009', 3, 'Ukupna Vrednost', 'UI'),
+('STRING_00010', 3, 'Kod', 'Labels'),
+('STRING_00011', 3, 'Naziv', 'Labels'),
+('STRING_00012', 3, 'Kategorija', 'Labels'),
+('STRING_00013', 3, 'Jedinica', 'Labels'),
+('STRING_00014', 3, 'Cena', 'Labels'),
+('STRING_00015', 3, 'PDV Stopa', 'Labels'),
+('STRING_00016', 3, 'Zaliha', 'Labels'),
+('STRING_00017', 3, 'Status', 'Labels'),
+('STRING_00018', 3, 'Akcije', 'Labels'),
+('STRING_00019', 3, 'Aktivan', 'Labels'),
+('STRING_00020', 3, 'Neaktivan', 'Labels'),
+('STRING_00021', 3, 'Izmeni', 'Actions'),
+('STRING_00022', 3, 'Obriši', 'Actions'),
+('STRING_00023', 3, 'Pregledaj', 'Actions'),
+('STRING_00024', 3, 'Sačuvaj', 'Actions'),
+('STRING_00025', 3, 'Otkaži', 'Actions'),
+('STRING_00026', 3, 'Kreiraj Artikal', 'UI'),
+('STRING_00027', 3, 'Izmeni Artikal', 'UI'),
+('STRING_00028', 3, 'Opis', 'Labels'),
+('STRING_00029', 3, 'Valuta', 'Labels'),
+('STRING_00030', 3, 'Količina na Zalihi', 'Labels');
+
+
+USE AccountingSystem;
+GO
+
+INSERT INTO Units (Code, Description) VALUES
+('pcs', 'Pieces'),
+('kg', 'Kilograms'),
+('g', 'Grams'),
+('l', 'Liters'),
+('ml', 'Milliliters'),
+('m', 'Meters'),
+('cm', 'Centimeters'),
+('m²', 'Square meters'),
+('m³', 'Cubic meters'),
+('pack', 'Pack'),
+('box', 'Box'),
+('set', 'Set'),
+('license', 'License'),
+('hour', 'Hour'),
+('service', 'Service'),
+('dozen', 'Dozen'),
+('pair', 'Pair'),
+('roll', 'Roll'),
+('sheet', 'Sheet'),
+('bottle', 'Bottle');
+
+USE AccountingSystem;
+GO
+INSERT INTO UserSettings (UserId, SelectedLanguageId) VALUES ('default', 1);
+
+
+USE AccountingSystem;
+GO
+
+-- Insert sample Articles (using foreign keys)
+INSERT INTO Articles (Name, Code, Description, UnitId, Price, CurrencyId, VATRate, StockQuantity, Category) VALUES
+('Office Chair', 'CHAIR-001', 'Ergonomic office chair', 1, 299.99, 2, 21.00, 15, 'Furniture'),
+('Laptop', 'LAPTOP-001', 'Business laptop', 1, 1299.99, 2, 21.00, 8, 'Electronics'),
+('Paper A4', 'PAPER-A4', 'Office paper pack', 8, 12.50, 2, 21.00, 200, 'Office Supplies');
+
+
+USE [AccountingSystem]
+GO
+
+INSERT INTO Vattable (VATId	VATName	VATRate	Description	IsActive)
+     VALUES
+(1,	'Standard VAT', 18',Standard VAT rate',1),
+(2,	'Reduced VAT', 8',Reduced VAT rate1),
+(3,	'No VAT', 0',VAT exempt', 1),
+(5,	'I liruar nga TVSH',0, 'I liruar nga TVSH',	1)
+
+GO
+
+
+INSERT INTO Subjects (
+    Code, 
+    Description, 
+    SubjectName, 
+    NUI, 
+    FiscalNr, 
+    Address, 
+    ContactPerson, 
+    Telephone, 
+    Email, 
+    Website,
+    IsBuyer,
+    IsFurnitor,
+    IsBuyerForCashOnly,
+    IsSubjectWithoutVAT,
+    IsSubjectNoExcise,
+    IsFarmer,
+    IsInternationalSubject,
+    IsActive,
+    CreatedAt
+)
+VALUES 
+-- Local Company
+('COMP001', 'Local Trading Company', 'Trade Corp LLC', 'L12345', 'F98765', 
+'123 Main Street, City', 'John Smith', '+355 69 123 4567', 'contact@tradecorp.com', 'www.tradecorp.com',
+1, 1, 0, 0, 0, 0, 0, 1, GETUTCDATE()),
+
+-- International Supplier
+('SUPP002', 'International Supplier', 'Global Supply Co', 'I45678', 'F87654',
+'456 Business Ave, London, UK', 'Jane Doe', '+44 20 7123 4567', 'info@globalsupply.com', 'www.globalsupply.com',
+0, 1, 0, 0, 0, 0, 1, 1, GETUTCDATE()),
+
+-- Local Farmer
+('FARM003', 'Local Agricultural Producer', 'Green Fields Farm', 'F78901', 'F76543',
+'789 Rural Road, Village', 'Mark Johnson', '+355 68 234 5678', 'greenfields@email.com', null,
+0, 1, 0, 1, 0, 1, 0, 1, GETUTCDATE()),
+
+-- Cash Only Customer
+('CUST004', 'Cash Only Customer', 'Quick Buy Shop', 'C23456', 'F65432',
+'321 Shop Street, City', 'Sarah Wilson', '+355 67 345 6789', 'quickbuy@email.com', null,
+1, 0, 1, 0, 0, 0, 0, 1, GETUTCDATE()),
+
+-- VAT Exempt Company
+('COMP005', 'VAT Exempt Business', 'Tax Free Trading', 'E34567', 'F54321',
+'567 Tax Ave, City', 'Michael Brown', '+355 69 456 7890', 'taxfree@email.com', 'www.taxfree.com',
+1, 1, 0, 1, 1, 0, 0, 1, GETUTCDATE());
+
+username / passwords:
+U: admin@accounting.com     p: Admin123!
+
+new { Username = "ardi1", Email = "ardi1@accounting.com", Role = "Accountant", Password = "Ardi1!123" },
+new { Username = "ardi22", Email = "ardi22@accounting.com", Role = "User", Password = "Ardi22@123" },
+new { Username = "ardi1111", Email = "ardi1111@accounting.com", Role = "Admin", Password = "Ardi1111@123" }

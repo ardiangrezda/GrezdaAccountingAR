@@ -1,0 +1,403 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using Server.Models
+@using Server.Services
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject SalesCategoryService SalesCategoryService
+@inject ILocalizationService LocalizationService
+@inject StateContainer StateContainer
+@implements IDisposable
+@inject ILogger<NavMenu> Logger
+
+<div class="sidebar">
+    <div class="nav-header">
+        <h4>Accounting System</h4>
+    </div>
+
+    <nav class="flex-column">
+        <div class="nav-item">
+            <NavLink class="nav-link" href="subjects">  @* Changed from "subjektet" *@
+                <span>Subjects</span>
+            </NavLink>
+        </div>
+
+        <div class="nav-item">
+            <NavLink class="nav-link" href="blerje">
+                <span>Blerje</span>
+            </NavLink>
+        </div>
+
+        <div class="nav-item">
+            <NavLink class="nav-link" @onclick="ToggleShitjeSubMenu">
+                <span class="oi oi-cart" aria-hidden="true"></span><span>Shitje</span>
+            </NavLink>
+            @if (showShitjeSubMenu)
+            {
+                <div class="submenu">
+                    @foreach (var category in salesCategories)
+                    {
+                        <NavLink class="@($"nav-link sub {(IsCurrentCategory(category.Code) ? "active-category" : "")}")" 
+                                 href="@GetCategoryRoute(category.Code)">
+                            <i class="fas fa-angle-right me-2"></i>
+                            @(GetLocalizedText(category.NameString?.StringKey))
+                        </NavLink>
+                    }
+                </div>
+            }
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link" href="levizje-interne">
+                <span>Levizje interne</span>
+            </NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link" href="pagesa">
+                <span>Pagesa</span>
+            </NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link" href="kontabiliteti">
+                <span>Kontabiliteti</span>
+            </NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link" href="administrimi">
+                <span>Administrimi</span>
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="articles">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Articles
+            </NavLink>
+        </div>
+        <!--
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="shitja-vendore">
+                <span class="oi oi-cart" aria-hidden="true"></span> Shitja Vendore
+            </NavLink>
+        </div>
+        -->
+        <!--
+        Remove language switcher for now
+        <div class="nav-item">
+            <LanguageSwitcher />
+        </div>
+        -->
+        <div class="nav-item">
+            <button @onclick="HandleLogoutAsync" class="nav-link btn btn-link logout-btn">
+                <span class="oi oi-account-logout" aria-hidden="true"></span> Logout
+            </button>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool showShitjeSubMenu = false;
+    private List<SalesCategory> salesCategories = new();
+    private int defaultLanguageId = 1;
+    private string? currentCategory;
+    private bool isFirstRender = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        salesCategories = await StateContainer.GetSalesCategoriesAsync();
+        await StateContainer.RefreshSalesCategoriesAsync();
+        defaultLanguageId = await LocalizationService.GetDefaultLanguageId();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                currentCategory = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "currentSalesCategory");
+                isFirstRender = false;
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error loading category from session storage");
+            }
+        }
+    }
+
+    private void ToggleShitjeSubMenu()
+    {
+        showShitjeSubMenu = !showShitjeSubMenu;
+        
+        // If expanding the menu and currently on a non-sales page, navigate to sales
+        if (showShitjeSubMenu && !NavigationManager.Uri.ToLower().Contains("/sales"))
+        {
+            NavigationManager.NavigateTo("/sales");
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += HandleLocationChanged;
+        base.OnInitialized();
+    }
+
+    private async void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        try
+        {
+            var currentPath = e.Location.ToLower();
+            
+            // Collapse submenu if not in sales section
+            if (!currentPath.Contains("/sales"))
+            {
+                showShitjeSubMenu = false;
+                currentCategory = null;
+                await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "currentSalesCategory");
+            }
+            // Handle sales section
+            else
+            {
+                // Auto-expand submenu when in sales section
+                showShitjeSubMenu = true;
+                
+                try
+                {
+                    // Check if we're on a category listing page
+                    foreach (var category in salesCategories)
+                    {
+                        var categoryRoute = GetCategoryRoute(category.Code).ToLower();
+                        if (currentPath.EndsWith(categoryRoute))
+                        {
+                            currentCategory = category.Code;
+                            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "currentSalesCategory", category.Code);
+                            break;
+                        }
+                    }
+
+                    // If not on a category page, get category from session storage
+                    if (currentCategory == null || 
+                        (currentPath.Contains("/sales/edit/") || System.Text.RegularExpressions.Regex.IsMatch(currentPath, @"/sales/\d+")))
+                    {
+                        currentCategory = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "currentSalesCategory");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error getting category from session storage");
+                }
+            }
+            
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error handling location change");
+        }
+    }
+
+    private bool IsCurrentCategory(string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return false;
+
+        var currentPath = NavigationManager.Uri.ToLower();
+
+        // For viewing, editing specific invoice, or create mode
+        if (currentPath.Contains("/sales/edit/") || 
+            System.Text.RegularExpressions.Regex.IsMatch(currentPath, @"/sales/\d+") || 
+            currentPath.Contains("/sales/create"))
+        {
+            return code.Equals(currentCategory, StringComparison.OrdinalIgnoreCase);
+        }
+
+        // For category listing pages, use exact path matching
+        var categoryRoute = GetCategoryRoute(code).ToLower();
+        return currentPath.EndsWith(categoryRoute, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task HandleLogoutAsync()
+    {
+        try
+        {
+            // First sign out
+            await SignInManager.SignOutAsync();
+
+            // Clear any client-side storage
+            await JSRuntime.InvokeVoidAsync("localStorage.clear");
+            await JSRuntime.InvokeVoidAsync("sessionStorage.clear");
+
+            // Force reload to clear all state and redirect to login
+            await JSRuntime.InvokeVoidAsync("window.location.replace", "/login");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Logout error: {ex.Message}");
+            // Fallback navigation
+            NavigationManager.NavigateTo("/login", forceLoad: true);
+        }
+    }
+
+    private string GetCategoryRoute(string code)
+    {
+        // Convert category code to route (keep this part as is)
+        return code.ToLower() switch
+        {
+            "dom" => "sales/domestic",
+            "cash" => "sales/cash",
+            "exp" => "sales/export",
+            "del" => "sales/delivery",
+            "serv" => "sales/service",
+            "cn" => "sales/credit-note",
+            "ret" => "sales/returns",
+            "other" => "sales/other",
+            "sum" => "sales/summary",
+            "print" => "sales/printing",
+            "bar" => "sales/barcode",
+            _ => "sales"
+        };
+    }
+
+    private string GetLocalizedText(string? stringKey)
+    {
+        if (string.IsNullOrEmpty(stringKey))
+            return "";
+
+        // Get default language ID, defaulting to 1 if null
+        var languageId = defaultLanguageId;
+        
+        // Call GetString with non-nullable int
+        return LocalizationService.GetString(stringKey, languageId) ?? stringKey;
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= HandleLocationChanged;
+    }
+}
+
+<style>
+    .sidebar {
+        width: 280px;
+        height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        background: linear-gradient(180deg, #1a237e 0%, #0d47a1 100%);
+        color: #fff;
+        padding: 1rem;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+    }
+
+    .nav-header {
+        margin-bottom: 2rem;
+        text-align: center;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding-bottom: 1rem;
+    }
+
+        .nav-header h4 {
+            font-weight: 600;
+            margin: 0;
+            color: #fff;
+            font-size: 1.4rem;
+        }
+
+    .nav-item {
+        margin-bottom: 0.25rem;
+    }
+
+    .nav-link {
+        color: rgba(255,255,255,0.9) !important;
+        text-decoration: none;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        font-weight: 500;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        margin: 2px 0;
+    }
+
+        .nav-link:hover {
+            background-color: rgba(255,255,255,0.2); /* Increased from 0.1 to 0.2 */
+            color: #fff !important;
+            transform: translateX(3px);
+        }
+
+        .nav-link.active {
+            background-color: rgba(255,255,255,0.35) !important; /* Increased from 0.15 to 0.35 */
+            color: #fff !important;
+            font-weight: 600;
+            box-shadow: 0 0 10px rgba(255,255,255,0.1); /* Added subtle glow effect */
+        }
+
+        .nav-link.sub {
+            padding: 0.6rem 1rem 0.6rem 2.5rem;
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.85) !important;
+            position: relative;
+        }
+
+            .nav-link.sub::before {
+                content: '';
+                position: absolute;
+                left: 1.5rem;
+                top: 50%;
+                width: 4px;
+                height: 4px;
+                background-color: rgba(255,255,255,0.5);
+                border-radius: 50%;
+                transform: translateY(-50%);
+            }
+
+            .nav-link.sub:hover::before {
+                background-color: #fff;
+            }
+
+    .submenu {
+        background-color: rgba(0,0,0,0.15);
+        border-radius: 8px;
+        margin: 0.5rem 0;
+        padding: 0.5rem 0;
+    }
+
+    .logout-btn {
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: none;
+        margin-top: 2rem;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        border-radius: 0;
+        padding-top: 1rem;
+    }
+
+        .logout-btn:hover {
+            background-color: rgba(255,0,0,0.1);
+        }
+
+    /* Scrollbar styling */
+    .sidebar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-track {
+        background: rgba(255,255,255,0.1);
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+        background-color: rgba(255,255,255,0.2);
+        border-radius: 3px;
+    }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(255,255,255,0.3);
+        }
+
+    .nav-link.sub.active-category {
+        background-color: rgba(255,255,255,0.45) !important; /* Increased from 0.3 to 0.45 */
+        color: #fff !important;
+        font-weight: bold;
+        box-shadow: 0 0 10px rgba(255,255,255,0.1); /* Added subtle glow effect */
+    }
+</style>

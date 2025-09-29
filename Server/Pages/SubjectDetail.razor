@@ -1,0 +1,259 @@
+@page "/subjects/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@using Server.Models
+@using Server.Services
+@inject SubjectService SubjectService
+@inject ILocalizationService LocalizationService
+@inject NavigationManager Navigation
+@attribute [Authorize]
+
+<div class="container-fluid px-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>@pageTitle</h1>
+                <div>
+                    <button class="btn btn-outline-primary me-2" @onclick="() => EditSubject(subject.Id)">
+                        <i class="fas fa-edit"></i> @editButtonText
+                    </button>
+                    <button class="btn btn-outline-secondary" @onclick="GoBack">
+                        <i class="fas fa-arrow-left"></i> @backButtonText
+                    </button>
+                </div>
+            </div>
+
+            @if (subject != null)
+            {
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Basic Information -->
+                            <div class="col-md-6">
+                                <h4 class="mb-3">@basicInfoHeader</h4>
+                                <dl class="row">
+                                    <dt class="col-sm-4">@nuiLabel</dt>
+                                    <dd class="col-sm-8"><code>@subject.NUI</code></dd>
+
+                                    <dt class="col-sm-4">@subjectNameLabel</dt>
+                                    <dd class="col-sm-8">@subject.SubjectName</dd>
+
+                                    <dt class="col-sm-4">@descriptionLabel</dt>
+                                    <dd class="col-sm-8">@subject.Description</dd>
+
+                                    <dt class="col-sm-4">@fiscalNrLabel</dt>
+                                    <dd class="col-sm-8">@subject.FiscalNr</dd>
+                                </dl>
+                            </div>
+
+                            <!-- Contact Information -->
+                            <div class="col-md-6">
+                                <h4 class="mb-3">@contactInfoHeader</h4>
+                                <dl class="row">
+                                    <dt class="col-sm-4">@contactPersonLabel</dt>
+                                    <dd class="col-sm-8">@subject.ContactPerson</dd>
+
+                                    <dt class="col-sm-4">@addressLabel</dt>
+                                    <dd class="col-sm-8">@subject.Address</dd>
+
+                                    <dt class="col-sm-4">@telephoneLabel</dt>
+                                    <dd class="col-sm-8">@subject.Telephone</dd>
+
+                                    <dt class="col-sm-4">@emailLabel</dt>
+                                    <dd class="col-sm-8">
+                                        @if (!string.IsNullOrEmpty(subject.Email))
+                                        {
+                                            <a href="mailto:@subject.Email">@subject.Email</a>
+                                        }
+                                    </dd>
+
+                                    <dt class="col-sm-4">@websiteLabel</dt>
+                                    <dd class="col-sm-8">
+                                        @if (!string.IsNullOrEmpty(subject.Website))
+                                        {
+                                            <a href="@subject.Website" target="_blank">@subject.Website</a>
+                                        }
+                                    </dd>
+                                </dl>
+                            </div>
+
+                            <!-- Accounting Information -->
+                            <div class="col-md-6">
+                                <h4 class="mb-3">@accountingInfoHeader</h4>
+                                <dl class="row">
+                                    <dt class="col-sm-4">@accountsReceivableLabel</dt>
+                                    <dd class="col-sm-8">@subject.AccountsReceivable</dd>
+
+                                    <dt class="col-sm-4">@accountsPayableLabel</dt>
+                                    <dd class="col-sm-8">@subject.AccountsPayable</dd>
+
+                                    <dt class="col-sm-4">@mobileSalesLabel</dt>
+                                    <dd class="col-sm-8">
+                                        @if (subject.MobileSales)
+                                        {
+                                            <span class="badge bg-success">@enabledLabel</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">@disabledLabel</span>
+                                        }
+                                    </dd>
+                                </dl>
+                            </div>
+
+                            <!-- Subject Type -->
+                            <div class="col-12 mt-4">
+                                <h4 class="mb-3">@subjectTypesHeader</h4>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @if (subject.IsBuyer)
+                                    {
+                                        <span class="badge bg-info">Buyer</span>
+                                    }
+                                    @if (subject.IsFurnitor)
+                                    {
+                                        <span class="badge bg-success">Supplier</span>
+                                    }
+                                    @if (subject.IsBuyerForCashOnly)
+                                    {
+                                        <span class="badge bg-warning">Cash Only</span>
+                                    }
+                                    @if (subject.IsSubjectWithoutVAT)
+                                    {
+                                        <span class="badge bg-secondary">Without VAT</span>
+                                    }
+                                    @if (subject.IsInternationalSubject)
+                                    {
+                                        <span class="badge bg-primary">International</span>
+                                    }
+                                    @if (subject.IsFarmer)
+                                    {
+                                        <span class="badge bg-success">Farmer</span>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Status and Dates -->
+                            <div class="col-12 mt-4">
+                                <h4 class="mb-3">@statusInfoHeader</h4>
+                                <dl class="row">
+                                    <dt class="col-sm-2">Status</dt>
+                                    <dd class="col-sm-4">
+                                        @if (subject.IsActive)
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        }
+                                    </dd>
+
+                                    <dt class="col-sm-2">@createdLabel</dt>
+                                    <dd class="col-sm-4">@subject.CreatedAt.ToString("g")</dd>
+
+                                    @if (subject.UpdatedAt.HasValue)
+                                    {
+                                        <dt class="col-sm-2">@lastUpdatedLabel</dt>
+                                        <dd class="col-sm-4">@subject.UpdatedAt.Value.ToString("g")</dd>
+                                    }
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning">
+                    <h4>@notFoundTitle</h4>
+                    <p>@notFoundMessage</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Subject? subject;
+
+    private string pageTitle = string.Empty;
+    private string basicInfoHeader = string.Empty;
+    private string contactInfoHeader = string.Empty;
+    private string subjectTypesHeader = string.Empty;
+    private string nuiLabel = string.Empty;
+    private string fiscalNrLabel = string.Empty;
+    private string contactPersonLabel = string.Empty;
+    private string addressLabel = string.Empty;
+    private string telephoneLabel = string.Empty;
+    private string emailLabel = string.Empty;
+    private string websiteLabel = string.Empty;
+    private string backButtonText = string.Empty;
+    private string editButtonText = string.Empty;
+    private string restoreButtonText = string.Empty;
+    private string notFoundTitle = string.Empty;
+    private string notFoundMessage = string.Empty;
+    private string subjectNameLabel = string.Empty;
+    private string descriptionLabel = string.Empty;
+    private string createdLabel = string.Empty;
+    private string lastUpdatedLabel = string.Empty;
+    private string statusInfoHeader = string.Empty;
+    private string accountingInfoHeader = string.Empty;
+    private string accountsReceivableLabel = string.Empty;
+    private string accountsPayableLabel = string.Empty;
+    private string mobileSalesLabel = string.Empty;
+    private string enabledLabel = string.Empty;
+    private string disabledLabel = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        subject = await SubjectService.GetSubjectByIdAsync(Id);
+        if (subject == null)
+        {
+            Navigation.NavigateTo("/subjects");
+        }
+
+        // Get default language ID once
+        var languageId = await LocalizationService.GetDefaultLanguageId();
+
+        // Load all localized strings using synchronous GetString
+        pageTitle = LocalizationService.GetString("STRING_00076", languageId) ?? "Subject Details";
+        basicInfoHeader = LocalizationService.GetString("STRING_00077", languageId) ?? "Basic Information";
+        contactInfoHeader = LocalizationService.GetString("STRING_00078", languageId) ?? "Contact Information";
+        subjectTypesHeader = LocalizationService.GetString("STRING_00079", languageId) ?? "Subject Types";
+        nuiLabel = LocalizationService.GetString("STRING_00080", languageId) ?? "NUI";
+        fiscalNrLabel = LocalizationService.GetString("STRING_00081", languageId) ?? "Fiscal Number";
+        contactPersonLabel = LocalizationService.GetString("STRING_00082", languageId) ?? "Contact Person";
+        addressLabel = LocalizationService.GetString("STRING_00083", languageId) ?? "Address";
+        telephoneLabel = LocalizationService.GetString("STRING_00084", languageId) ?? "Telephone";
+        emailLabel = LocalizationService.GetString("STRING_00085", languageId) ?? "Email";
+        websiteLabel = LocalizationService.GetString("STRING_00086", languageId) ?? "Website";
+        backButtonText = LocalizationService.GetString("STRING_00087", languageId) ?? "Back";
+        editButtonText = LocalizationService.GetString("STRING_00088", languageId) ?? "Edit";
+        restoreButtonText = LocalizationService.GetString("STRING_00089", languageId) ?? "Restore";
+        notFoundTitle = LocalizationService.GetString("STRING_00090", languageId) ?? "Not Found";
+        notFoundMessage = LocalizationService.GetString("STRING_00091", languageId) ?? "Subject not found";
+        subjectNameLabel = LocalizationService.GetString("STRING_00034", languageId) ?? "Subject Name";
+        descriptionLabel = LocalizationService.GetString("STRING_00028", languageId) ?? "Description";
+        createdLabel = LocalizationService.GetString("STRING_00062", languageId) ?? "Created";
+        lastUpdatedLabel = LocalizationService.GetString("STRING_00092", languageId) ?? "Last Updated";
+
+        accountingInfoHeader = LocalizationService.GetString("STRING_00093", languageId) ?? "Accounting Information";
+        accountsReceivableLabel = LocalizationService.GetString("STRING_00052", languageId) ?? "Accounts Receivable";
+        accountsPayableLabel = LocalizationService.GetString("STRING_00053", languageId) ?? "Accounts Payable";
+        mobileSalesLabel = LocalizationService.GetString("STRING_00058", languageId) ?? "Mobile Sales";
+        enabledLabel = LocalizationService.GetString("STRING_00095", languageId) ?? "Enabled";
+        disabledLabel = LocalizationService.GetString("STRING_00096", languageId) ?? "Disabled";
+    }
+
+    private void EditSubject(int id)
+    {
+        Navigation.NavigateTo($"/subjects/edit/{id}");
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/subjects");
+    }
+}

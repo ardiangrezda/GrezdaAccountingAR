@@ -1,0 +1,278 @@
+﻿@page "/articles/{Id:int}"
+@using Server.Models
+@using Server.Services
+@inject ArticleService ArticleService
+@inject NavigationManager Navigation
+@inject ILocalizationService LocalizationService
+
+<PageTitle>@(article?.Code ?? "Article")</PageTitle>
+
+@if (article != null)
+{
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="/articles">Articles</a>
+                        </li>
+                        <li class="breadcrumb-item active">@article.Code</li>
+                    </ol>
+                </nav>
+
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">@article.Code</h3>
+                        <div>
+                            @if (article.IsActive)
+                            {
+                                <span class="badge bg-success me-2">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary me-2">Inactive</span>
+                            }
+                            <button class="btn btn-primary btn-sm" @onclick="EditArticle">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>@basicInfoLabel</h5>
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td><strong>@(codeLabel):</strong></td>
+                                        <td><code>@article.Code</code></td>
+                                    </tr>
+                                    @if (!string.IsNullOrEmpty(article.Barcode))
+                                    {
+                                        <tr>
+                                            <td><strong>@(barcodeLabel):</strong></td>
+                                            <td><code>@article.Barcode</code></td>
+                                        </tr>
+                                    }
+                                    <tr>
+                                        <td><strong>@(categoryLabel):</strong></td>
+                                        <td>@article.Category</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>@(unitLabel):</strong></td>
+                                        <td>@article.Unit?.Description (@article.Unit?.Code)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>@(createdLabel):</strong></td>
+                                        <td>@article.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                    </tr>
+                                    @if (article.UpdatedAt.HasValue)
+                                    {
+                                        <tr>
+                                            <td><strong>@(updatedLabel):</strong></td>
+                                            <td>@article.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm")</td>
+                                        </tr>
+                                    }
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>@pricingInventoryLabel</h5>
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td><strong>@(priceLabel):</strong></td>
+                                        <td>@article.Price.ToString("F2") @article.Currency?.Code</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>@(vatTypeLabel):</strong></td>
+                                        <td>
+                                            <span class="badge bg-info">
+                                                @article.VATTable?.VATName (@article.VATTable?.VATRate.ToString("F1")%)
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>@vatAmountLabel:</strong></td>
+                                        <td>@article.VATAmount.ToString("F2") @article.Currency?.Code</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>@stockQuantityLabel:</strong></td>
+                                        <td>
+                                            <span class="@(article.StockQuantity <= 10 ? "text-danger fw-bold" : "")">
+                                                @article.StockQuantity @article.Unit?.Code
+                                            </span>
+                                            @if (article.StockQuantity <= 10)
+                                            {
+                                                <span class="badge bg-warning ms-2">Low Stock</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>@stockValueLabel:</strong></td>
+                                        <td>@((article.Price * article.StockQuantity).ToString("F2")) @article.Currency?.Code</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Descriptions Section -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h5>@descriptionsLabel</h5>
+
+                                @if (!string.IsNullOrWhiteSpace(article.Description))
+                                {
+                                    <div class="mb-3">
+                                        <h6>@descriptionLabel</h6>
+                                        <p class="border rounded p-3 bg-light">@article.Description</p>
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(article.Description2))
+                                {
+                                    <div class="mb-3">
+                                        <h6>Description 2</h6>
+                                        <p class="border rounded p-3 bg-light">@article.Description2</p>
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(article.Description3))
+                                {
+                                    <div class="mb-3">
+                                        <h6>Description 3</h6>
+                                        <p class="border rounded p-3 bg-light">@article.Description3</p>
+                                    </div>
+                                }
+
+                                @if (string.IsNullOrWhiteSpace(article.Description) &&
+                                                            string.IsNullOrWhiteSpace(article.Description2) &&
+                                                            string.IsNullOrWhiteSpace(article.Description3))
+                                {
+                                    <p class="text-muted">No descriptions available.</p>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions Section -->
+                        @if (article.StockQuantity <= 10 && article.IsActive)
+                        {
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <div class="alert alert-warning">
+                                        <h5><i class="fas fa-exclamation-triangle"></i> Low Stock Alert</h5>
+                                        <p>This article has low stock quantity (@article.StockQuantity @article.Unit?.Code). Consider reordering.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between">
+                            <button class="btn btn-secondary" @onclick="GoBack">
+                                <i class="fas fa-arrow-left"></i> Back to Articles
+                            </button>
+                            <div>
+                                @if (!article.IsActive)
+                                {
+                                    <button class="btn btn-success me-2" @onclick="RestoreArticle">
+                                        <i class="fas fa-undo"></i> Restore Article
+                                    </button>
+                                }
+                                <button class="btn btn-primary" @onclick="EditArticle">
+                                    <i class="fas fa-edit"></i> Edit Article
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (loading)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-warning">
+        <h4>Article Not Found</h4>
+        <p>The article you're looking for doesn't exist or has been removed.</p>
+        <a href="/articles" class="btn btn-primary">Back to Articles</a>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Article? article;
+    private bool loading = true;
+
+    // Add localized string properties
+    private string codeLabel = string.Empty;
+    private string barcodeLabel = string.Empty;
+    private string categoryLabel = string.Empty;
+    private string unitLabel = string.Empty;
+    private string createdLabel = string.Empty;
+    private string updatedLabel = string.Empty;
+    private string priceLabel = string.Empty;
+    private string vatTypeLabel = string.Empty;
+    private string vatAmountLabel = string.Empty;
+    private string stockQuantityLabel = string.Empty;
+    private string stockValueLabel = string.Empty;
+    private string stockValueWithVatLabel = string.Empty;
+    private string descriptionLabel = string.Empty;
+    private string basicInfoLabel = string.Empty;
+    private string pricingInventoryLabel = string.Empty;
+    private string descriptionsLabel = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get the default language ID once
+        var languageId = await LocalizationService.GetDefaultLanguageId();
+
+        // Load localized strings using synchronous GetString
+        codeLabel = LocalizationService.GetString("STRING_00033", languageId) ?? "Code";
+        barcodeLabel = LocalizationService.GetString("STRING_00010", languageId) ?? "Barcode";
+        categoryLabel = LocalizationService.GetString("STRING_00011", languageId) ?? "Category";
+        unitLabel = LocalizationService.GetString("STRING_00012", languageId) ?? "Unit";
+        createdLabel = LocalizationService.GetString("STRING_00062", languageId) ?? "Created";
+        updatedLabel = LocalizationService.GetString("STRING_00063", languageId) ?? "Updated";
+        priceLabel = LocalizationService.GetString("STRING_00013", languageId) ?? "Price";
+        vatTypeLabel = LocalizationService.GetString("STRING_00064", languageId) ?? "VAT Type";
+        vatAmountLabel = LocalizationService.GetString("STRING_00066", languageId) ?? "VAT Amount";
+        stockQuantityLabel = LocalizationService.GetString("STRING_00067", languageId) ?? "Stock Quantity";
+        stockValueLabel = LocalizationService.GetString("STRING_00068", languageId) ?? "Stock Value";
+        stockValueWithVatLabel = LocalizationService.GetString("STRING_00069", languageId) ?? "Stock Value with VAT";
+        pricingInventoryLabel = LocalizationService.GetString("STRING_00070", languageId) ?? "Pricing & Inventory";
+        descriptionsLabel = LocalizationService.GetString("STRING_00071", languageId) ?? "Descriptions";
+
+        // Load article data
+        article = await ArticleService.GetArticleByIdAsync(Id);
+        loading = false;
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/articles");
+    }
+
+    private void EditArticle()
+    {
+        Navigation.NavigateTo($"/articles/edit/{Id}");
+    }
+
+    private async Task RestoreArticle()
+    {
+        if (article != null)
+        {
+            await ArticleService.RestoreArticleAsync(article.Id);
+            // Reload the article to show updated status
+            article = await ArticleService.GetArticleByIdAsync(Id);
+            StateHasChanged();
+        }
+    }
+}

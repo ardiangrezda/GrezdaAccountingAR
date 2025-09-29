@@ -1,0 +1,296 @@
+@page "/subjects/create"
+@page "/subjects/edit/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@using Server.Models
+@using Server.Services
+@inject SubjectService SubjectService
+@inject NavigationManager Navigation
+@inject ILocalizationService LocalizationService
+@attribute [Authorize]
+
+<div class="container-fluid px-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>@pageTitle</h1>
+                <button class="btn btn-outline-secondary" @onclick="GoBack">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <EditForm Model="@subject" OnValidSubmit="HandleValidSubmit">
+                        <DataAnnotationsValidator />
+
+                        <div class="row">
+                            <!-- Basic Information -->
+                            <div class="col-md-6">
+                                <!-- Basic Information -->
+                                <h4 class="mb-3">@basicInfoHeader</h4>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">@codeLabel</label>
+                                    <InputText @bind-Value="subject.Code" class="form-control" />
+                                    <ValidationMessage For="@(() => subject.Code)" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">@subjectNameLabel</label>
+                                    <InputText @bind-Value="subject.SubjectName" class="form-control" />
+                                    <ValidationMessage For="@(() => subject.SubjectName)" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">@descriptionLabel</label>
+                                    <InputText @bind-Value="subject.Description" class="form-control" />
+                                    <ValidationMessage For="@(() => subject.Description)" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">@nuiLabel</label>
+                                    <InputText @bind-Value="subject.NUI" class="form-control" />
+                                    <ValidationMessage For="@(() => subject.NUI)" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">@fiscalNrLabel</label>
+                                    <InputText @bind-Value="subject.FiscalNr" class="form-control" />
+                                    <ValidationMessage For="@(() => subject.FiscalNr)" />
+                                </div>
+                            </div>
+
+                            <!-- Contact Information -->
+                            <div class="col-md-6">
+                                <!-- Contact Information -->
+                                <h4 class="mb-3">@contactInfoHeader</h4>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">@codeLabel</label>
+                                    <InputText @bind-Value="subject.Code" class="form-control" />
+                                    <ValidationMessage For="@(() => subject.Code)" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">@contactPersonLabel</label>
+                                    <InputText @bind-Value="subject.ContactPerson" class="form-control" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">@addressLabel</label>
+                                    <InputText @bind-Value="subject.Address" class="form-control" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">@telephoneLabel</label>
+                                    <InputText @bind-Value="subject.Telephone" class="form-control" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">@emailLabel</label>
+                                    <InputText @bind-Value="subject.Email" class="form-control" />
+                                    <ValidationMessage For="@(() => subject.Email)" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">@websiteLabel</label>
+                                    <InputText @bind-Value="subject.Website" class="form-control" />
+                                    <ValidationMessage For="@(() => subject.Website)" />
+                                </div>
+
+                            </div>
+                               
+                            <!-- Subject Type -->
+                            <div class="col-12">
+                                <!-- Subject Type -->
+                                <h4 class="mb-3">@subjectTypeLabel</h4>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">@accountsReceivableLabel</label>
+                                            <InputText @bind-Value="subject.AccountsReceivable" class="form-control" />
+                                            <ValidationMessage For="@(() => subject.AccountsReceivable)" />
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <InputCheckbox @bind-Value="subject.IsBuyer" class="form-check-input" />
+                                            <label class="form-check-label">@buyerLabel</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">@accountsPayableLabel</label>
+                                            <InputText @bind-Value="subject.AccountsPayable" class="form-control" />
+                                            <ValidationMessage For="@(() => subject.AccountsPayable)" />
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <InputCheckbox @bind-Value="subject.IsFurnitor" class="form-check-input" />
+                                            <label class="form-check-label">@supplierLabel</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-check mb-2">
+                                            <InputCheckbox @bind-Value="subject.IsBuyerForCashOnly" class="form-check-input" />
+                                            <label class="form-check-label">@cashOnlyBuyerLabel</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <InputCheckbox @bind-Value="subject.IsSubjectWithoutVAT" class="form-check-input" />
+                                            <label class="form-check-label">@withoutVatLabel</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check mb-2">
+                                            <InputCheckbox @bind-Value="subject.IsInternationalSubject" class="form-check-input" />
+                                            <label class="form-check-label">@internationalLabel</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <InputCheckbox @bind-Value="subject.IsFarmer" class="form-check-input" />
+                                            <label class="form-check-label">@farmerLabel</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check mb-3">
+                                            <InputCheckbox @bind-Value="subject.MobileSales" class="form-check-input" />
+                                            <label class="form-check-label">@mobileSalesLabel</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Status -->
+                            <div class="col-12 mt-3">
+                                <div class="form-check">
+                                    <InputCheckbox @bind-Value="subject.IsActive" class="form-check-input" />
+                                    <label class="form-check-label">@activeLabel</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary ms-2" @onclick="GoBack">
+                                Cancel
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    // Add this property
+    private bool IsEdit => Id.HasValue;
+
+    private Subject subject = new();
+    private string errorMessage = string.Empty;
+
+    private string pageTitle = string.Empty;
+
+    // Add these properties
+    private string basicInfoHeader = string.Empty;
+    private string contactInfoHeader = string.Empty;
+    private string subjectTypesHeader = string.Empty;
+    private string nuiLabel = string.Empty;
+    private string fiscalNrLabel = string.Empty;
+    private string contactPersonLabel = string.Empty;
+    private string addressLabel = string.Empty;
+    private string telephoneLabel = string.Empty;
+    private string emailLabel = string.Empty;
+    private string websiteLabel = string.Empty;
+    private string subjectNameLabel = string.Empty;
+    private string descriptionLabel = string.Empty;
+    private string accountingInfoHeader = string.Empty;
+    private string codeLabel = string.Empty;
+
+    // Add these properties for form labels
+    private string subjectTypeLabel = string.Empty;
+    private string accountsReceivableLabel = string.Empty;
+    private string accountsPayableLabel = string.Empty;
+    private string buyerLabel = string.Empty;
+    private string supplierLabel = string.Empty;
+    private string cashOnlyBuyerLabel = string.Empty;
+    private string withoutVatLabel = string.Empty;
+    private string internationalLabel = string.Empty;
+    private string farmerLabel = string.Empty;
+    private string mobileSalesLabel = string.Empty;
+    private string activeLabel = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get default language ID once
+        var languageId = await LocalizationService.GetDefaultLanguageId();
+
+        // Load localized strings
+        pageTitle = LocalizationService.GetString("STRING_00097", languageId) ?? "Subject Form";
+        codeLabel = LocalizationService.GetString("STRING_00033", languageId) ?? "Code";
+        subjectNameLabel = LocalizationService.GetString("STRING_00034", languageId) ?? "Name";
+        descriptionLabel = LocalizationService.GetString("STRING_00028", languageId) ?? "Description";
+        nuiLabel = LocalizationService.GetString("STRING_00080", languageId) ?? "NUI";
+        fiscalNrLabel = LocalizationService.GetString("STRING_00081", languageId) ?? "Fiscal Number";
+        addressLabel = LocalizationService.GetString("STRING_00083", languageId) ?? "Address";
+        contactPersonLabel = LocalizationService.GetString("STRING_00082", languageId) ?? "Contact Person";
+        telephoneLabel = LocalizationService.GetString("STRING_00084", languageId) ?? "Telephone";
+        emailLabel = LocalizationService.GetString("STRING_00085", languageId) ?? "Email";
+        websiteLabel = LocalizationService.GetString("STRING_00086", languageId) ?? "Website";
+        accountsReceivableLabel = LocalizationService.GetString("STRING_00052", languageId) ?? "Accounts Receivable";
+        accountsPayableLabel = LocalizationService.GetString("STRING_00053", languageId) ?? "Accounts Payable";
+        mobileSalesLabel = LocalizationService.GetString("STRING_00058", languageId) ?? "Mobile Sales";
+        
+        // Add the missing checkbox labels
+        buyerLabel = LocalizationService.GetString("STRING_00054", languageId) ?? "Buyer";
+        supplierLabel = LocalizationService.GetString("STRING_00055", languageId) ?? "Supplier";
+        cashOnlyBuyerLabel = LocalizationService.GetString("STRING_00056", languageId) ?? "Cash Only Buyer";
+        withoutVatLabel = LocalizationService.GetString("STRING_00059", languageId) ?? "Without VAT";
+        internationalLabel = LocalizationService.GetString("STRING_00057", languageId) ?? "International";
+        farmerLabel = LocalizationService.GetString("STRING_00060", languageId) ?? "Farmer";
+        activeLabel = LocalizationService.GetString("STRING_00061", languageId) ?? "Active";
+        subjectTypeLabel = LocalizationService.GetString("STRING_00051", languageId) ?? "Subject Type";
+    
+        // Load subject if editing
+        if (IsEdit && Id.HasValue)
+        {
+            var existingSubject = await SubjectService.GetSubjectByIdAsync(Id.Value);
+            if (existingSubject != null)
+            {
+                subject = existingSubject;
+            }
+            else
+            {
+                Navigation.NavigateTo("/subjects");
+            }
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (Id.HasValue)
+            {
+                await SubjectService.UpdateSubjectAsync(subject);
+            }
+            else
+            {
+                await SubjectService.CreateSubjectAsync(subject);
+            }
+            GoBack();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/subjects");
+    }
+}

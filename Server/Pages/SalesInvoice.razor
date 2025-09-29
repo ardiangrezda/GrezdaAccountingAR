@@ -1,0 +1,878 @@
+@page "/sales/create"
+@page "/sales/create/{Category}"
+@page "/sales/edit/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Linq
+@using Server.Models
+@using Server.Services
+@using System.Security.Claims
+@inject SalesService SalesService
+@inject ArticleService ArticleService
+@inject SubjectService SubjectService
+@inject SalesCategoryService SalesCategoryService
+@inject ILocalizationService LocalizationService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject StateContainer StateContainer
+@attribute [Authorize]
+
+<style>
+    .table th {
+        font-size: 0.85rem;  /* Increased from 0.75rem */
+        padding: 0.5rem;
+        background-color: #4CAF50 !important;  /* Green header */
+        color: white;
+    }
+
+    .table td {
+        padding: 0.25rem;
+        vertical-align: middle;
+        font-size: 0.85rem;  /* Increased from default */
+    }
+
+    .table tr.totals-row {
+        background-color: #E8F5E9;
+        font-weight: bold;
+    }
+
+    .form-control-sm {
+        padding: 0.25rem 0.5rem;
+        height: calc(1.5em + 0.5rem + 2px);
+        font-size: 0.85rem;
+    }
+
+    .input-group-sm > .form-control,
+    .input-group-sm > .input-group-text {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .btn-remove {
+        padding: 0.375rem 0.75rem;
+        font-size: 1rem;
+    }
+
+    .invoice-summary {
+        background-color: #2C3E50;
+        color: white;
+        padding: 0.5rem 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .total-due {
+        background-color: #4CAF50;
+        color: white;
+        padding: 0.5rem 1rem;
+    }
+
+    .buyer-item {
+        cursor: pointer;
+    }
+
+    .buyer-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .z-1 {
+        z-index: 1000;
+    }
+
+    .invalid-field {
+        border-color: #dc3545;
+    }
+</style>
+
+<ErrorBoundary @ref="errorBoundary">
+    <ChildContent>
+        @if (sale != null && editContext != null)
+        {
+            <EditForm EditContext="editContext" OnValidSubmit="@HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="invoice-page">
+                    <div class="invoice-header bg-light border-bottom p-4 mb-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h2 class="mb-0">@pageTitle</h2>
+                                <small class="text-muted">
+                                    @(IsEdit ? $"Invoice #{sale.InvoiceNumber}" : "New Invoice") 
+                                    @if (currentCategoryName != null)
+                                    {
+                                        <span class="ms-2 badge bg-info">@currentCategoryName</span>
+                                    }
+                                </small>
+                            </div>
+                            <div class="invoice-actions">
+                                <button type="button" class="btn btn-outline-secondary me-2" @onclick="GoBack">
+                                    <i class="fas fa-arrow-left"></i> Back
+                                </button>
+                                <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                                    @if (isSaving)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-save"></i>
+                                    }
+                                    Save Invoice
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="container-fluid px-4">
+                        <div class="card mb-4 shadow-sm">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Invoice Number</label>
+                                            <InputText @bind-Value="sale.InvoiceNumber" 
+                                                       class="form-control" 
+                                                       disabled="@IsEdit" />
+                                            <ValidationMessage For="@(() => sale.InvoiceNumber)" class="text-danger" />
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Invoice Date</label>
+                                            <InputDate @bind-Value="sale.InvoiceDate" class="form-control" />
+                                            <ValidationMessage For="@(() => sale.InvoiceDate)" class="text-danger" />
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Expiry Date</label>
+                                            <InputDate @bind-Value="sale.InvoiceExpiryDate" class="form-control" />
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="card h-100 bg-light">
+                                            <div class="card-body">
+                                                <h5 class="card-title mb-3">Buyer Information</h5>
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold">Buyer Name</label>
+                                                    <div class="position-relative">
+                                                        <div class="input-group">
+                                                            <input value="@sale.BuyerName"
+                                                                   @oninput="HandleBuyerSearch"
+                                                                   class="@($"form-control {(sale.BuyerId <= 0 ? "invalid-field" : "")}")"
+                                                                   placeholder="Start typing buyer name..." />
+                                                        </div>
+                                                        @if (showBuyerSearch && buyerSearchResults.Any())
+                                                        {
+                                                            <div class="position-absolute w-100 mt-1 shadow bg-white border rounded-2 z-1">
+                                                                <div style="max-height: 200px; overflow-y: auto;">
+                                                                    @foreach (var buyer in buyerSearchResults)
+                                                                    {
+                                                                        <div class="p-2 border-bottom buyer-item" @onclick="() => SelectBuyer(buyer)">
+                                                                            <div class="fw-bold">@buyer.SubjectName</div>
+                                                                        </div>
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h5 class="mb-3">Invoice Items</h5>
+                                        <button type="button" class="btn btn-success btn-sm mb-3" @onclick="AddNewItem">
+                                            <i class="fas fa-plus"></i> Add Item
+                                        </button>
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th style="width: 40px">#</th>
+                                                        <th style="width: 150px">Article</th>
+                                                        <th style="width: 200px">Description</th>
+                                                        <th style="width: 80px" class="text-end">QTY</th>
+                                                        <th style="width: 80px" class="text-center">Unit</th>
+                                                        <th style="width: 120px" class="text-end">Price Excl.</th>
+                                                        <th style="width: 120px" class="text-end">Price Incl.</th>
+                                                        <th style="width: 100px" class="text-end">Disc. %</th>
+                                                        <th style="width: 120px" class="text-end">Disc. Amount</th>
+                                                        <th style="width: 120px" class="text-end">Value Excl.</th>
+                                                        <th style="width: 120px" class="text-end">Value Incl.</th>
+                                                        <th style="width: 40px"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @if (sale.Items != null && sale.Items.Count > 0)
+                                                    {
+                                                        @foreach (var (item, index) in sale.Items.Select((item, i) => (item, i + 1)))
+                                                        {
+                                                            <tr>
+                                                                <td class="text-center">@index</td>
+                                                                <td>
+                                                                    <input type="text" 
+                                                                           class="@($"form-control form-control-sm {(string.IsNullOrEmpty(item.Barcode) ? "invalid-field" : "")}")"
+                                                                           @bind="item.Barcode" 
+                                                                           @bind:event="oninput"
+                                                                           @onblur="() => HandleBarcodeChange(item)" />
+                                                                </td>
+                                                                <td>@item.Description</td>
+                                                                <td>
+                                                                    <input type="number" 
+                                                                           class="@($"form-control form-control-sm text-end {(item.Quantity <= 0 ? "invalid-field" : "")}")"
+                                                                           @bind="item.Quantity"
+                                                                           @bind:event="oninput"
+                                                                           @onblur="() => CalculateItemTotal(item)" />
+                                                                </td>
+                                                                <td class="text-center">@item.UnitCode</td>
+                                                                <td class="text-end">
+                                                                    <input type="number" class="form-control form-control-sm text-end" 
+                                                                           @bind="item.PriceWithoutVAT"
+                                                                           @bind:event="oninput"
+                                                                           @onblur="() => CalculateItemTotal(item)"
+                                                                           readonly />
+                                                                </td>
+                                                                <td class="text-end">
+                                                                    <input type="number" class="form-control form-control-sm text-end" 
+                                                                           @bind="item.PriceWithVAT"
+                                                                           @bind:event="oninput"
+                                                                           @onblur="() => CalculateItemTotal(item)"
+                                                                           readonly />
+                                                                </td>
+                                                                <td>
+                                                                    <div class="input-group input-group-sm">
+                                                                        <input type="number" class="form-control text-end" 
+                                                                               @bind="item.DiscountPercent"
+                                                                               @bind:event="oninput"
+                                                                               @onblur="() => CalculateItemTotal(item)" />
+                                                                        <span class="input-group-text">%</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td class="text-end">@item.DiscountAmount.ToString("N2")</td>
+                                                                <td class="text-end">@item.ValueWithoutVAT.ToString("N2")</td>
+                                                                <td class="text-end">@item.ValueWithVAT.ToString("N2")</td>
+                                                                <td>
+                                                                    <button type="button" class="btn btn-outline-danger btn-remove" @onclick="() => RemoveItem(item)">
+                                                                        <i class="fas fa-times"></i>
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <tr>
+                                                            <td colspan="12" class="text-center text-muted">
+                                                                No items added yet.
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr class="totals-row">
+                                                        <td colspan="7"></td>
+                                                        <td class="text-end">Totals:</td>
+                                                        <td class="text-end">@sale.TotalDiscountAmount.ToString("N2")</td>
+                                                        <td class="text-end">@sale.TotalWithoutVAT.ToString("N2")</td>
+                                                        <td class="text-end">@sale.TotalWithVAT.ToString("N2")</td>
+                                                        <td></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 offset-md-6">
+                                        <div class="card">
+                                            <div class="invoice-summary">
+                                                <h5 class="mb-0">INVOICE SUMMARY</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span>Subtotal (before discount):</span>
+                                                    <span class="fw-bold">@((sale.TotalWithoutVAT + sale.TotalDiscountAmount).ToString("N2"))</span>
+                                                </div>
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span>Total Discounts:</span>
+                                                    <span class="fw-bold text-danger">-@sale.TotalDiscountAmount.ToString("N2")</span>
+                                                </div>
+                                                <div class="d-flex justify-content-between mb-3">
+                                                    <span>Total VAT:</span>
+                                                    <span class="fw-bold">@sale.TotalVATAmount.ToString("N2")</span>
+                                                </div>
+                                                <div class="total-due">
+                                                    <div class="d-flex justify-content-between">
+                                                        <span class="h5 mb-0">TOTAL DUE:</span>
+                                                        <span class="h5 mb-0">@sale.TotalWithVAT.ToString("N2")</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </EditForm>
+        }
+        else if (loading)
+        {
+            <div class="text-center p-5">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning m-5">
+                <h4>Unable to load invoice</h4>
+                <p>The invoice you're trying to edit couldn't be loaded.</p>
+                <button class="btn btn-primary" @onclick="GoBack">Back to Sales</button>
+            </div>
+        }
+    </ChildContent>
+    <ErrorContent>
+        <div class="alert alert-danger">
+            <h4>An error occurred while processing your request</h4>
+            <p>Please try again or contact support if the problem persists.</p>
+            <button class="btn btn-secondary" @onclick="ResetError">Try Again</button>
+            <button class="btn btn-primary ms-2" @onclick="GoBack">Back to Sales</button>
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private Server.Models.SalesInvoice sale = new()
+    {
+        InvoiceDate = DateTime.Now,
+        Items = new List<SalesInvoiceItem>()
+    };
+    private bool isSaving;
+    private bool loading = true;
+    private bool IsEdit => Id.HasValue;
+    [Parameter] public int? Id { get; set; }
+    [Parameter] public string? Category { get; set; }
+    private string pageTitle = "Create Invoice";
+    private ErrorBoundary? errorBoundary;
+    private List<SalesCategory> salesCategories = new();
+
+    private List<Subject> buyerSearchResults = new();
+    private bool showBuyerSearch = false;
+    private EditContext? editContext;
+    private string? currentCategoryName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInvoice();
+    }
+
+    private async Task LoadInvoice()
+    {
+        try
+        {
+            loading = true;
+            pageTitle = IsEdit ? "Edit Invoice" : "Create Invoice";
+
+            // Get current user ID
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!IsEdit)
+            {
+                // Try to get the category ID from session storage
+                var storedCategoryId = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "selectedSalesCategoryId");
+                
+                // Clear it immediately after reading
+                await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "selectedSalesCategoryId");
+
+                // Parse the stored category ID, defaulting to 1 (DOM) if not found
+                var categoryId = !string.IsNullOrEmpty(storedCategoryId) && int.TryParse(storedCategoryId, out var id) 
+                    ? id 
+                    : 1;
+
+                sale = new Server.Models.SalesInvoice
+                {
+                    InvoiceDate = DateTime.Now,
+                    Items = new List<SalesInvoiceItem>(),
+                    CreatedByUserId = userId ?? throw new InvalidOperationException("User is not authenticated"),
+                    CreatedAt = DateTime.UtcNow,
+                    SalesCategoryId = categoryId
+                };
+            }
+            else if (Id.HasValue)
+            {
+                try
+                {
+                    var loadedSale = await SalesService.GetSaleByIdAsync(Id.Value);
+                    if (loadedSale != null)
+                    {
+                        // Handle navigation properties properly to avoid serialization issues
+                        sale = new Server.Models.SalesInvoice
+                        {
+                            Id = loadedSale.Id,
+                            InvoiceNumber = loadedSale.InvoiceNumber,
+                            InvoiceDate = loadedSale.InvoiceDate,
+                            InvoiceExpiryDate = loadedSale.InvoiceExpiryDate,
+                            BuyerId = loadedSale.BuyerId,
+                            BuyerCode = loadedSale.BuyerCode,
+                            BuyerName = loadedSale.BuyerName,
+                            IsCancelled = loadedSale.IsCancelled,
+                            CancellationReason = loadedSale.CancellationReason,
+                            IsPosted = loadedSale.IsPosted,
+                            PostedDate = loadedSale.PostedDate,
+                            CreatedByUserId = loadedSale.CreatedByUserId,
+                            CreatedAt = loadedSale.CreatedAt,
+                            LastModifiedByUserId = loadedSale.LastModifiedByUserId,
+                            LastModifiedAt = loadedSale.LastModifiedAt,
+                            SalesCategoryId = loadedSale.SalesCategoryId,
+                            TotalWithoutVAT = loadedSale.TotalWithoutVAT,
+                            TotalVATAmount = loadedSale.TotalVATAmount,
+                            TotalWithVAT = loadedSale.TotalWithVAT,
+                            TotalDiscountAmount = loadedSale.TotalDiscountAmount,
+                            Items = new List<SalesInvoiceItem>()
+                        };
+
+                        // Copy each item to avoid navigation property issues
+                        if (loadedSale.Items != null)
+                        {
+                            foreach (var sourceItem in loadedSale.Items)
+                            {
+                                var item = new SalesInvoiceItem
+                                {
+                                    Id = sourceItem.Id,
+                                    SalesInvoiceId = sourceItem.SalesInvoiceId,
+                                    ArticleId = sourceItem.ArticleId,
+                                    Barcode = sourceItem.Barcode,
+                                    ArticleCode = sourceItem.ArticleCode,
+                                    Description = sourceItem.Description,
+                                    Quantity = sourceItem.Quantity,
+                                    UnitId = sourceItem.UnitId,
+                                    UnitCode = sourceItem.UnitCode,
+                                    PriceWithoutVAT = sourceItem.PriceWithoutVAT,
+                                    PriceWithVAT = sourceItem.PriceWithVAT,
+                                    DiscountPercent = sourceItem.DiscountPercent,
+                                    DiscountAmount = sourceItem.DiscountAmount,
+                                    VATPercent = sourceItem.VATPercent,
+                                    VATAmount = sourceItem.VATAmount,
+                                    ValueWithoutVAT = sourceItem.ValueWithoutVAT,
+                                    ValueWithVAT = sourceItem.ValueWithVAT,
+                                    CurrencyId = sourceItem.CurrencyId,
+                                    CurrencyCode = sourceItem.CurrencyCode,
+                                    ExchangeRate = sourceItem.ExchangeRate
+                                };
+                                
+                                sale.Items.Add(item);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        await JSRuntime.InvokeVoidAsync("alert", "Invoice not found");
+                        Navigation.NavigateTo("/sales");
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await JSRuntime.InvokeVoidAsync("console.error", "Error loading invoice", ex.Message);
+                    await JSRuntime.InvokeVoidAsync("alert", $"Error loading invoice: {ex.Message}");
+                    Navigation.NavigateTo("/sales");
+                    return;
+                }
+            }
+
+            // Create a new EditContext with the loaded or new sale
+            editContext = new EditContext(sale);
+            editContext.OnValidationStateChanged += ValidationStateChanged;
+
+            // Load category name
+            await LoadCategoryName();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error initializing page", ex.Message);
+            await JSRuntime.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
+    {
+        StateHasChanged();
+    }
+
+    private bool ValidateForm()
+    {
+        if (editContext == null) return false;
+        return editContext.Validate();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (isSaving) return;
+
+            if (!await ValidateInvoice()) return;
+
+            isSaving = true;
+            StateHasChanged();
+
+            try
+            {
+                // Get the current category before saving
+                var categories = await StateContainer.GetSalesCategoriesAsync();
+                var category = categories.FirstOrDefault(c => c.Id == sale.SalesCategoryId);
+                var categoryRoute = category?.Code != null ? GetCategoryRoute(category.Code) : "sales";
+
+                if (!IsEdit)
+                {
+                    await SalesService.CreateSaleAsync(sale);
+                    await JSRuntime.InvokeVoidAsync("alert", "Invoice created successfully!");
+                }
+                else
+                {
+                    await SalesService.UpdateSaleAsync(sale);
+                    await JSRuntime.InvokeVoidAsync("alert", "Invoice updated successfully!");
+                }
+
+                // Navigate back to the specific category page
+                Navigation.NavigateTo($"/{categoryRoute}");
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Error saving invoice: {ex.Message}");
+            }
+            finally
+            {
+                isSaving = false;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"An error occurred: {ex.Message}");
+        }
+    }
+
+    private async Task GoBack()
+    {
+        try
+        {
+            // Get the current category code based on the sale's category ID
+            var categories = await StateContainer.GetSalesCategoriesAsync();
+            var category = categories.FirstOrDefault(c => c.Id == sale.SalesCategoryId);
+            
+            if (category?.Code != null)
+            {
+                // Keep the category in session storage
+                await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "currentSalesCategory", category.Code);
+                
+                // Navigate to the specific category route
+                var categoryRoute = GetCategoryRoute(category.Code);
+                Navigation.NavigateTo($"/{categoryRoute}");
+            }
+            else
+            {
+                // Fallback to general sales page if category not found
+                await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "currentSalesCategory");
+                Navigation.NavigateTo("/sales");
+            }
+        }
+        catch (Exception ex)
+        {
+            // If anything goes wrong, fall back to the general sales page
+            await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "currentSalesCategory");
+            Navigation.NavigateTo("/sales");
+        }
+    }
+
+    private string GetCategoryRoute(string code)
+    {
+        // Convert category code to route
+        return code.ToLower() switch
+        {
+            "dom" => "sales/domestic",
+            "cash" => "sales/cash",
+            "exp" => "sales/export",
+            "del" => "sales/delivery",
+            "serv" => "sales/service",
+            "cn" => "sales/credit-note",
+            "ret" => "sales/returns",
+            "other" => "sales/other",
+            "sum" => "sales/summary",
+            "print" => "sales/printing",
+            "bar" => "sales/barcode",
+            _ => "sales"
+        };
+    }
+
+    private async void ResetError()
+    {
+        errorBoundary?.Recover();
+        await LoadInvoice();
+    }
+
+    private void RemoveItem(SalesInvoiceItem item)
+    {
+        sale.Items.Remove(item);
+        RecalculateTotals();
+    }
+
+    private async Task HandleBuyerCodeChange(string buyerCode)
+    {
+        if (string.IsNullOrEmpty(buyerCode)) return;
+
+        var buyer = await SubjectService.GetSubjectByCodeAsync(buyerCode);
+        if (buyer != null)
+        {
+            sale.BuyerId = buyer.Id;
+            sale.BuyerCode = buyer.Code;
+            sale.BuyerName = buyer.SubjectName;
+        }
+    }
+
+    private async Task CalculateItemTotal(SalesInvoiceItem item)
+    {
+        try
+        {
+            if (item.PriceWithVAT <= 0 || item.Quantity <= 0) return;
+
+            // When price with VAT is changed, recalculate price without VAT
+            item.PriceWithoutVAT = Math.Round(item.PriceWithVAT / (1 + (item.VATPercent / 100)), 2);
+
+            // Calculate base value without VAT
+            item.ValueWithoutVAT = Math.Round(item.Quantity * item.PriceWithoutVAT, 2);
+
+            // Calculate discount amount from the net price
+            item.DiscountAmount = Math.Round(item.ValueWithoutVAT * (item.DiscountPercent / 100), 2);
+
+            // Calculate net value after discount
+            decimal netValueAfterDiscount = item.ValueWithoutVAT - item.DiscountAmount;
+
+            // Calculate VAT amount on the discounted value
+            item.VATAmount = Math.Round(netValueAfterDiscount * (item.VATPercent / 100), 2);
+
+            // For Value Including VAT, use direct multiplication when there's no discount
+            if (item.DiscountPercent == 0)
+            {
+                item.ValueWithVAT = item.Quantity * item.PriceWithVAT;
+            }
+            else
+            {
+                // If there's a discount, calculate based on discounted value plus VAT
+                item.ValueWithVAT = netValueAfterDiscount + item.VATAmount;
+            }
+
+            RecalculateTotals();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error calculating totals", ex.Message);
+        }
+    }
+
+    private void AddNewItem()
+    {
+        try
+        {
+            sale.Items ??= new List<SalesInvoiceItem>();
+            
+            var newItem = new SalesInvoiceItem
+            {
+                SalesInvoiceId = sale.Id,
+                Quantity = 1,
+                CurrencyCode = "EUR",
+                ExchangeRate = 1,
+                VATPercent = 0,
+                DiscountPercent = 0,
+                PriceWithVAT = 0,
+                PriceWithoutVAT = 0,
+                ValueWithVAT = 0,
+                ValueWithoutVAT = 0,
+                DiscountAmount = 0,
+                VATAmount = 0
+            };
+            
+            sale.Items.Add(newItem);
+            
+            // Create new EditContext after modifying the model
+            editContext = new EditContext(sale);
+            editContext.OnValidationStateChanged += ValidationStateChanged;
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            JSRuntime.InvokeVoidAsync("console.error", "Error adding new item", ex.Message);
+        }
+    }
+
+    private void RecalculateTotals()
+    {
+        if (sale.Items == null || !sale.Items.Any())
+        {
+            sale.TotalWithoutVAT = 0;
+            sale.TotalDiscountAmount = 0;
+            sale.TotalVATAmount = 0;
+            sale.TotalWithVAT = 0;
+            return;
+        }
+
+        sale.TotalWithoutVAT = sale.Items.Sum(i => i.ValueWithoutVAT);
+        sale.TotalDiscountAmount = sale.Items.Sum(i => i.DiscountAmount);
+        sale.TotalVATAmount = sale.Items.Sum(i => i.VATAmount);
+        sale.TotalWithVAT = sale.Items.Sum(i => i.ValueWithVAT);
+    }
+
+    private async Task HandleBarcodeChange(SalesInvoiceItem item)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(item.Barcode)) return;
+
+            var article = await ArticleService.GetArticleByBarcodeAsync(item.Barcode);
+            if (article != null)
+            {
+                item.ArticleId = article.Id;
+                item.ArticleCode = article.Code;
+                item.Description = article.Description;
+                item.PriceWithVAT = article.Price;  // Assuming price from article includes VAT
+                item.UnitId = article.UnitId;
+                item.UnitCode = article.Unit?.Code ?? "";
+                item.VATPercent = article.VATTable?.VATRate ?? 0;
+                item.CurrencyId = article.CurrencyId;
+                item.CurrencyCode = article.Currency?.Code ?? "EUR";
+
+                if (item.Quantity <= 0) item.Quantity = 1;
+
+                await CalculateItemTotal(item);
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error loading article", ex.Message);
+        }
+    }
+
+    private async Task HandleBuyerSearch(ChangeEventArgs e)
+    {
+        var searchTerm = e.Value?.ToString();
+
+        // Update the buyer name as user types
+        sale.BuyerName = searchTerm ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            buyerSearchResults.Clear();
+            showBuyerSearch = false;
+            return;
+        }
+
+        // Search for buyers
+        buyerSearchResults = await SubjectService.SearchBuyersAsync(searchTerm);
+        showBuyerSearch = true;
+        StateHasChanged();
+    }
+
+    private void SelectBuyer(Subject buyer)
+    {
+        if (buyer == null) return;
+
+        sale.BuyerId = buyer.Id;
+        sale.BuyerCode = buyer.Code;
+        sale.BuyerName = buyer.SubjectName;
+
+        // Hide the search results
+        showBuyerSearch = false;
+        buyerSearchResults.Clear();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        if (editContext != null)
+        {
+            editContext.OnValidationStateChanged -= ValidationStateChanged;
+        }
+    }
+
+    private async Task<bool> ValidateInvoice()
+    {
+        if (string.IsNullOrEmpty(sale.InvoiceNumber))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Invoice number is required.");
+            return false;
+        }
+
+        if (sale.BuyerId <= 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please select a buyer.");
+            return false;
+        }
+
+        if (sale.Items == null || !sale.Items.Any())
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please add at least one item.");
+            return false;
+        }
+
+        foreach (var item in sale.Items)
+        {
+            if (item.ArticleId <= 0)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "All items must have a valid article.");
+                return false;
+            }
+
+            if (item.Quantity <= 0)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "All items must have a quantity greater than zero.");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private async Task LoadCategoryName()
+    {
+        try
+        {
+            if (sale.SalesCategoryId > 0)
+            {
+                var categories = await StateContainer.GetSalesCategoriesAsync();
+                var category = categories.FirstOrDefault(c => c.Id == sale.SalesCategoryId);
+                if (category?.NameString?.StringKey != null)
+                {
+                    var languageId = await LocalizationService.GetDefaultLanguageId();
+                    currentCategoryName = LocalizationService.GetString(category.NameString.StringKey, languageId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error loading category name", ex.Message);
+        }
+    }
+}
