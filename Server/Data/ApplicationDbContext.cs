@@ -22,6 +22,8 @@ namespace Server.Data
         public DbSet<SalesInvoice> SalesInvoices { get; set; }
         public DbSet<SalesInvoiceItem> SalesInvoiceItems { get; set; }
         public DbSet<SalesCategory> SalesCategories { get; set; } = null!;
+        public DbSet<BusinessUnit> BusinessUnits { get; set; }
+        public DbSet<UserBusinessUnit> UserBusinessUnits { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -128,6 +130,21 @@ namespace Server.Data
                     .HasForeignKey(e => e.SelectedLanguageId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
+
+            modelBuilder.Entity<UserBusinessUnit>()
+                .HasKey(ub => new { ub.UserId, ub.BusinessUnitId }); // Composite key
+
+            modelBuilder.Entity<UserBusinessUnit>()
+                .HasOne(ub => ub.User)
+                .WithMany(u => u.UserBusinessUnits)
+                .HasForeignKey(ub => ub.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<UserBusinessUnit>()
+                .HasOne(ub => ub.BusinessUnit)
+                .WithMany(b => b.UserBusinessUnits)
+                .HasForeignKey(ub => ub.BusinessUnitId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

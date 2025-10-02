@@ -74,6 +74,7 @@ builder.Services.AddScoped<ILocalizationService, LocalizationService>();
 builder.Services.AddScoped<SubjectService>();
 builder.Services.AddScoped<SalesService>();
 builder.Services.AddScoped<SalesCategoryService>();
+builder.Services.AddScoped<BusinessUnitService>();
 builder.Services.AddSingleton<StateContainer>();
 
 // CORS configuration
@@ -88,98 +89,6 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
-
-// Create users and roles
-using (var scope = app.Services.CreateScope())
-{
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
-    // Temporarily remove existing users (remove this after users are properly set up)
-    var existingUsers = new[] { "ardi1@accounting.com", "ardi22@accounting.com", "ardi1111@accounting.com" };
-    foreach (var email in existingUsers)
-    {
-        var user = await userManager.FindByEmailAsync(email);
-        if (user != null)
-        {
-            await userManager.DeleteAsync(user);
-        }
-    }
-
-    // Create roles if they don't exist
-    var roles = new[] { "Admin", "Accountant", "User" };
-    foreach (var role in roles)
-    {
-        if (!await roleManager.RoleExistsAsync(role))
-            await roleManager.CreateAsync(new IdentityRole(role));
-    }
-
-    // Create admin user
-    var adminEmail = "admin@accounting.com";
-    var adminUser = await userManager.FindByEmailAsync(adminEmail);
-    if (adminUser == null)
-    {
-        adminUser = new ApplicationUser
-        {
-            UserName = adminEmail,
-            Email = adminEmail,
-            FirstName = "Admin",
-            LastName = "User",
-            EmailConfirmed = true
-        };
-        await userManager.CreateAsync(adminUser, "Admin123!");
-        await userManager.AddToRoleAsync(adminUser, "Admin");
-    }
-
-    // Create additional users
-    var users = new[]
-    {
-        new { Username = "ardi1", Email = "ardi1@accounting.com", Role = "Accountant", Password = "Ardi1!123" },
-        new { Username = "ardi22", Email = "ardi22@accounting.com", Role = "User", Password = "123456" },
-        new { Username = "ardi1111", Email = "ardi1111@accounting.com", Role = "Admin", Password = "123456" }
-    };
-
-    foreach (var userData in users)
-    {
-        var user = await userManager.FindByEmailAsync(userData.Email);
-        if (user == null)
-        {
-            user = new ApplicationUser
-            {
-                UserName = userData.Email, // Changed to use email as username
-                Email = userData.Email,
-                FirstName = userData.Username,
-                LastName = "User",
-                EmailConfirmed = true,
-                IsActive = true
-            };
-
-            var result = await userManager.CreateAsync(user, userData.Password);
-            if (result.Succeeded)
-            {
-                var roleResult = await userManager.AddToRoleAsync(user, userData.Role);
-                Console.WriteLine($"User {userData.Email} created successfully");
-                Console.WriteLine($"Role assignment {(roleResult.Succeeded ? "succeeded" : "failed")}");
-                
-                // Verify the user can be found and password works
-                var createdUser = await userManager.FindByEmailAsync(userData.Email);
-                if (createdUser != null)
-                {
-                    var passwordValid = await userManager.CheckPasswordAsync(createdUser, userData.Password);
-                    Console.WriteLine($"Password verification: {passwordValid}");
-                }
-            }
-            else
-            {
-                Console.WriteLine($"Failed to create user {userData.Email}:");
-                foreach (var error in result.Errors)
-                {
-                    Console.WriteLine($"- {error.Description}");
-                }
-            }
-        }
-    }
-}
 
 // Configure pipeline
 if (!app.Environment.IsDevelopment())

@@ -30,7 +30,7 @@
 
         <div class="nav-item">
             <NavLink class="nav-link" @onclick="ToggleShitjeSubMenu">
-                <span class="oi oi-cart" aria-hidden="true"></span><span>Shitje</span>
+                <i class="oi oi-cart" aria-hidden="true"></i><span>Shitje</span>
             </NavLink>
             @if (showShitjeSubMenu)
             {
@@ -62,22 +62,26 @@
             </NavLink>
         </div>
         <div class="nav-item">
-            <NavLink class="nav-link" href="administrimi">
-                <span>Administrimi</span>
+            <NavLink class="nav-link" @onclick="ToggleAdminSubMenu" >
+                <i class="oi oi-person" aria-hidden="true"></i><span>Administrimi</span>
             </NavLink>
+            @if (showAdminSubMenu)
+            {
+                <div class="submenu">
+                    <NavLink class="nav-link sub" href="admin/business-units">
+                        <i class="fas fa-store me-2"></i>Business Units
+                    </NavLink>
+                    <NavLink class="nav-link sub" href="admin/user-business-units">
+                        <i class="fas fa-users-cog me-2"></i>Business Unit Access
+                    </NavLink>
+                </div>
+            }
         </div>
-        <div class="nav-item px-3">
+        <div class="nav-item">
             <NavLink class="nav-link" href="articles">
-                <span class="oi oi-list-rich" aria-hidden="true"></span> Articles
+                <i class="oi oi-list-rich" aria-hidden="true"></i><span>Artikulli</span>
             </NavLink>
         </div>
-        <!--
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="shitja-vendore">
-                <span class="oi oi-cart" aria-hidden="true"></span> Shitja Vendore
-            </NavLink>
-        </div>
-        -->
         <!--
         Remove language switcher for now
         <div class="nav-item">
@@ -94,6 +98,7 @@
 
 @code {
     private bool showShitjeSubMenu = false;
+    private bool showAdminSubMenu = false;
     private List<SalesCategory> salesCategories = new();
     private int defaultLanguageId = 1;
     private string? currentCategory;
@@ -134,6 +139,17 @@
         }
     }
 
+    private void ToggleAdminSubMenu()
+    {
+        showAdminSubMenu = !showAdminSubMenu;
+        
+        // If expanding the menu and currently on a non-admin page, navigate to admin
+        if (showAdminSubMenu && !NavigationManager.Uri.ToLower().Contains("/admin"))
+        {
+            NavigationManager.NavigateTo("/admin");
+        }
+    }
+
     protected override void OnInitialized()
     {
         NavigationManager.LocationChanged += HandleLocationChanged;
@@ -146,14 +162,13 @@
         {
             var currentPath = e.Location.ToLower();
             
-            // Collapse submenu if not in sales section
+            // Handle sales section
             if (!currentPath.Contains("/sales"))
             {
                 showShitjeSubMenu = false;
                 currentCategory = null;
                 await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "currentSalesCategory");
             }
-            // Handle sales section
             else
             {
                 // Auto-expand submenu when in sales section
@@ -184,6 +199,16 @@
                 {
                     Logger.LogError(ex, "Error getting category from session storage");
                 }
+            }
+            
+            // Handle admin section
+            if (!currentPath.Contains("/admin"))
+            {
+                showAdminSubMenu = false;
+            }
+            else
+            {
+                showAdminSubMenu = true;
             }
             
             await InvokeAsync(StateHasChanged);
@@ -399,5 +424,9 @@
         color: #fff !important;
         font-weight: bold;
         box-shadow: 0 0 10px rgba(255,255,255,0.1); /* Added subtle glow effect */
+    }
+
+    .nav-link i {
+        margin-right: 0.75rem;  /* or any desired spacing */
     }
 </style>

@@ -22,5 +22,7 @@ namespace Server.Models
 
         [NotMapped]
         public string FullName => $"{FirstName} {LastName}";
+
+        public ICollection<UserBusinessUnit> UserBusinessUnits { get; set; } = new List<UserBusinessUnit>();
     }
 }

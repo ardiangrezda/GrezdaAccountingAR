@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Server.Data;
 
@@ -11,9 +12,11 @@ using Server.Data;
 namespace Server.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251001141838_AddSaleUnitsTable")]
+    partial class AddSaleUnitsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -321,46 +324,6 @@ namespace Server.Migrations
                     b.ToTable("Articles");
                 });
 
-            modelBuilder.Entity("Server.Models.BusinessUnit", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Address")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("LastModifiedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("BusinessUnits");
-                });
-
             modelBuilder.Entity("Server.Models.Currency", b =>
                 {
                     b.Property<int>("CurrencyId")
@@ -473,6 +436,46 @@ namespace Server.Migrations
                         .IsUnique();
 
                     b.ToTable("LocalizationStrings");
+                });
+
+            modelBuilder.Entity("Server.Models.SaleUnit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SaleUnits");
                 });
 
             modelBuilder.Entity("Server.Models.SalesCategory", b =>
@@ -803,27 +806,6 @@ namespace Server.Migrations
                     b.ToTable("Units");
                 });
 
-            modelBuilder.Entity("Server.Models.UserBusinessUnit", b =>
-                {
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("BusinessUnitId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("AssignedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.HasKey("UserId", "BusinessUnitId");
-
-                    b.HasIndex("BusinessUnitId");
-
-                    b.ToTable("UserBusinessUnits");
-                });
-
             modelBuilder.Entity("Server.Models.UserSetting", b =>
                 {
                     b.Property<string>("UserId")
@@ -1050,25 +1032,6 @@ namespace Server.Migrations
                     b.Navigation("Unit");
                 });
 
-            modelBuilder.Entity("Server.Models.UserBusinessUnit", b =>
-                {
-                    b.HasOne("Server.Models.BusinessUnit", "BusinessUnit")
-                        .WithMany("UserBusinessUnits")
-                        .HasForeignKey("BusinessUnitId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Server.Models.ApplicationUser", "User")
-                        .WithMany("UserBusinessUnits")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("BusinessUnit");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Server.Models.UserSetting", b =>
                 {
                     b.HasOne("Server.Models.Language", "Language")
@@ -1084,16 +1047,6 @@ namespace Server.Migrations
                         .IsRequired();
 
                     b.Navigation("Language");
-                });
-
-            modelBuilder.Entity("Server.Models.ApplicationUser", b =>
-                {
-                    b.Navigation("UserBusinessUnits");
-                });
-
-            modelBuilder.Entity("Server.Models.BusinessUnit", b =>
-                {
-                    b.Navigation("UserBusinessUnits");
                 });
 
             modelBuilder.Entity("Server.Models.Currency", b =>

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Server.Data;
 
@@ -11,9 +12,11 @@ using Server.Data;
 namespace Server.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251001181141_RenameToBusinessUnits")]
+    partial class RenameToBusinessUnits
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -803,27 +806,6 @@ namespace Server.Migrations
                     b.ToTable("Units");
                 });
 
-            modelBuilder.Entity("Server.Models.UserBusinessUnit", b =>
-                {
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("BusinessUnitId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("AssignedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.HasKey("UserId", "BusinessUnitId");
-
-                    b.HasIndex("BusinessUnitId");
-
-                    b.ToTable("UserBusinessUnits");
-                });
-
             modelBuilder.Entity("Server.Models.UserSetting", b =>
                 {
                     b.Property<string>("UserId")
@@ -1050,25 +1032,6 @@ namespace Server.Migrations
                     b.Navigation("Unit");
                 });
 
-            modelBuilder.Entity("Server.Models.UserBusinessUnit", b =>
-                {
-                    b.HasOne("Server.Models.BusinessUnit", "BusinessUnit")
-                        .WithMany("UserBusinessUnits")
-                        .HasForeignKey("BusinessUnitId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Server.Models.ApplicationUser", "User")
-                        .WithMany("UserBusinessUnits")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("BusinessUnit");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Server.Models.UserSetting", b =>
                 {
                     b.HasOne("Server.Models.Language", "Language")
@@ -1084,16 +1047,6 @@ namespace Server.Migrations
                         .IsRequired();
 
                     b.Navigation("Language");
-                });
-
-            modelBuilder.Entity("Server.Models.ApplicationUser", b =>
-                {
-                    b.Navigation("UserBusinessUnits");
-                });
-
-            modelBuilder.Entity("Server.Models.BusinessUnit", b =>
-                {
-                    b.Navigation("UserBusinessUnits");
                 });
 
             modelBuilder.Entity("Server.Models.Currency", b =>
