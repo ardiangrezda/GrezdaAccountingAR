@@ -6,50 +6,89 @@ namespace Server.Services
 {
     public class BusinessUnitService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
 
-        public BusinessUnitService(ApplicationDbContext context)
+        public BusinessUnitService(IDbContextFactory<ApplicationDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
 
         public async Task<List<BusinessUnit>> GetAllAsync()
         {
-            return await _context.BusinessUnits.OrderBy(u => u.Code).ToListAsync();
+            using var context = _contextFactory.CreateDbContext();
+            return await context.BusinessUnits
+                .Where(bu => bu.IsActive)
+                .OrderBy(bu => bu.Name)
+                .ToListAsync();
         }
 
         public async Task<BusinessUnit?> GetByIdAsync(int id)
         {
-            return await _context.BusinessUnits.FindAsync(id);
+            using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.BusinessUnits.FindAsync(id);
         }
 
         public async Task<BusinessUnit> CreateAsync(BusinessUnit businessUnit)
         {
-            _context.BusinessUnits.Add(businessUnit);
-            await _context.SaveChangesAsync();
+            using var context = await _contextFactory.CreateDbContextAsync();
+            context.BusinessUnits.Add(businessUnit);
+            await context.SaveChangesAsync();
             return businessUnit;
         }
 
         public async Task UpdateAsync(BusinessUnit businessUnit)
         {
+            using var context = await _contextFactory.CreateDbContextAsync();
             businessUnit.LastModifiedAt = DateTime.UtcNow;
-            _context.BusinessUnits.Update(businessUnit);
-            await _context.SaveChangesAsync();
+            context.BusinessUnits.Update(businessUnit);
+            await context.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(int id)
         {
-            var businessUnit = await _context.BusinessUnits.FindAsync(id);
+            using var context = await _contextFactory.CreateDbContextAsync();
+            var businessUnit = await context.BusinessUnits.FindAsync(id);
             if (businessUnit != null)
             {
-                _context.BusinessUnits.Remove(businessUnit);
-                await _context.SaveChangesAsync();
+                context.BusinessUnits.Remove(businessUnit);
+                await context.SaveChangesAsync();
             }
+        }
+
+        public async Task<List<BusinessUnit>> GetUserBusinessUnitsAsync(string userId, bool isAdmin)
+        {
+            using var context = _contextFactory.CreateDbContext();
+
+            if (isAdmin)
+            {
+                // Admin can access all active business units
+                return await context.BusinessUnits
+                    .Where(bu => bu.IsActive)
+                    .OrderBy(bu => bu.Name)
+                    .ToListAsync();
+            }
+            else
+            {
+                // Regular user can only access assigned business units
+                return await context.UserBusinessUnits
+                    .Where(ub => ub.UserId == userId)
+                    .Select(ub => ub.BusinessUnit)
+                    .Where(bu => bu.IsActive)
+                    .OrderBy(bu => bu.Name)
+                    .ToListAsync();
+            }
+        }
+
+        public async Task<BusinessUnit?> GetDefaultBusinessUnitAsync(string userId, bool isAdmin)
+        {
+            var units = await GetUserBusinessUnitsAsync(userId, isAdmin);
+            return units.Count == 1 ? units.First() : null;
         }
 
         public async Task<List<BusinessUnit>> GetBusinessUnitsForUserAsync(string userId)
         {
-            return await _context.UserBusinessUnits
+            using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.UserBusinessUnits
                 .Where(ub => ub.UserId == userId && ub.IsActive)
                 .Select(ub => ub.BusinessUnit)
                 .ToListAsync();
@@ -57,19 +96,21 @@ namespace Server.Services
 
         public async Task<List<UserBusinessUnit>> GetUserBusinessUnitsAsync(string userId)
         {
-            return await _context.UserBusinessUnits
+            using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.UserBusinessUnits
                 .Where(ub => ub.UserId == userId)
                 .ToListAsync();
         }
 
         public async Task AssignUserToBusinessUnitAsync(string userId, int businessUnitId)
         {
-            var existing = await _context.UserBusinessUnits
+            using var context = await _contextFactory.CreateDbContextAsync();
+            var existing = await context.UserBusinessUnits
                 .FirstOrDefaultAsync(ub => ub.UserId == userId && ub.BusinessUnitId == businessUnitId);
 
             if (existing == null)
             {
-                _context.UserBusinessUnits.Add(new UserBusinessUnit
+                context.UserBusinessUnits.Add(new UserBusinessUnit
                 {
                     UserId = userId,
                     BusinessUnitId = businessUnitId,
@@ -77,19 +118,20 @@ namespace Server.Services
                     IsActive = true
                 });
 
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
         }
 
         public async Task RemoveUserFromBusinessUnitAsync(string userId, int businessUnitId)
         {
-            var assignment = await _context.UserBusinessUnits
+            using var context = await _contextFactory.CreateDbContextAsync();
+            var assignment = await context.UserBusinessUnits
                 .FirstOrDefaultAsync(ub => ub.UserId == userId && ub.BusinessUnitId == businessUnitId);
 
             if (assignment != null)
             {
-                _context.UserBusinessUnits.Remove(assignment);
-                await _context.SaveChangesAsync();
+                context.UserBusinessUnits.Remove(assignment);
+                await context.SaveChangesAsync();
             }
         }
     }

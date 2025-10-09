@@ -24,6 +24,7 @@ namespace Server.Data
         public DbSet<SalesCategory> SalesCategories { get; set; } = null!;
         public DbSet<BusinessUnit> BusinessUnits { get; set; }
         public DbSet<UserBusinessUnit> UserBusinessUnits { get; set; }
+        public DbSet<InvoiceNumberFormat> InvoiceNumberFormats { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -145,6 +146,13 @@ namespace Server.Data
                 .WithMany(b => b.UserBusinessUnits)
                 .HasForeignKey(ub => ub.BusinessUnitId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<InvoiceNumberFormat>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Separator).IsRequired();
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            });
         }
     }
 }

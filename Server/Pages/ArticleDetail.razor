@@ -4,6 +4,7 @@
 @inject ArticleService ArticleService
 @inject NavigationManager Navigation
 @inject ILocalizationService LocalizationService
+@attribute [Authorize]
 
 <PageTitle>@(article?.Code ?? "Article")</PageTitle>
 

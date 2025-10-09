@@ -5,6 +5,7 @@
 @inject ArticleService ArticleService
 @inject NavigationManager Navigation
 @inject ILocalizationService LocalizationService
+@attribute [Authorize]
 
 <PageTitle>@(IsEdit ? "Edit Article" : "Create Article")</PageTitle>
 

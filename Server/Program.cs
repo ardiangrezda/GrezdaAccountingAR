@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Server.Data;
 using Server.Models;
@@ -9,7 +10,7 @@ using Server.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Database
+// Database - Remove duplicate DbContextFactory
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -75,6 +76,7 @@ builder.Services.AddScoped<SubjectService>();
 builder.Services.AddScoped<SalesService>();
 builder.Services.AddScoped<SalesCategoryService>();
 builder.Services.AddScoped<BusinessUnitService>();
+builder.Services.AddScoped<BusinessUnitStateContainer>();
 builder.Services.AddSingleton<StateContainer>();
 
 // CORS configuration
@@ -97,43 +99,130 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseStaticFiles();
 app.UseRouting();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Error handling middleware
+// Authentication middleware
 app.Use(async (context, next) =>
 {
-    try
+    var path = context.Request.Path.Value?.ToLower() ?? "";
+    var isAuthenticated = context.User?.Identity?.IsAuthenticated == true;
+    
+    // Allow access to login page and its resources
+    if (path.StartsWith("/login") || 
+        path.StartsWith("/account/login") ||
+        path.StartsWith("/_framework") || 
+        path.StartsWith("/_blazor") ||
+        path.StartsWith("/css") || 
+        path.StartsWith("/js") ||
+        path.StartsWith("/_content"))
     {
         await next();
+        return;
     }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"Unhandled exception: {ex}");
-        throw;
-    }
-});
 
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapBlazorHub();
-    endpoints.MapFallbackToPage("/_Host");
-    endpoints.MapRazorPages();
-});
-
-// Your authentication check middleware
-app.Use(async (context, next) =>
-{
-    if (context.Request.Path == "/" && !context.User.Identity.IsAuthenticated)
+    // Check if user is NOT authenticated
+    if (!isAuthenticated)
     {
         context.Response.Redirect("/login");
         return;
     }
+
     await next();
 });
+
+// Logout endpoints
+app.MapPost("/logout", async (SignInManager<ApplicationUser> signInManager, HttpContext context) =>
+{
+    await signInManager.SignOutAsync();
+    
+    var html = @"
+<!DOCTYPE html>
+<html>
+<head><title>Logging out...</title></head>
+<body>
+<script>
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.href = '/login';
+</script>
+</body>
+</html>";
+    
+    context.Response.ContentType = "text/html";
+    await context.Response.WriteAsync(html);
+});
+
+app.MapGet("/logout", async (SignInManager<ApplicationUser> signInManager, HttpContext context) =>
+{
+    await signInManager.SignOutAsync();
+    
+    var html = @"
+<!DOCTYPE html>
+<html>
+<head><title>Logging out...</title></head>
+<body>
+<script>
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.href = '/login';
+</script>
+</body>
+</html>";
+    
+    context.Response.ContentType = "text/html";
+    await context.Response.WriteAsync(html);
+});
+
+// Login endpoint - Only POST, remove GET
+app.MapPost("/Account/Login", async (
+    HttpContext context,
+    SignInManager<ApplicationUser> signInManager) =>
+{
+    try 
+    {
+        var form = await context.Request.ReadFormAsync();
+        var email = form["email"].ToString();
+        var password = form["password"].ToString();
+        var rememberMe = form["rememberMe"].ToString().ToLower() == "true";
+        var returnUrl = form["returnUrl"].ToString();
+
+        if (string.IsNullOrEmpty(returnUrl))
+            returnUrl = "/";
+
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+        {
+            return Results.Redirect("/login?error=missing");
+        }
+
+        var result = await signInManager.PasswordSignInAsync(email, password, rememberMe, lockoutOnFailure: false);
+        
+        if (result.Succeeded)
+        {
+            return Results.Redirect(returnUrl);
+        }
+        else
+        {
+            return Results.Redirect("/login?error=failed");
+        }
+    }
+    catch (Exception)
+    {
+        return Results.Redirect("/login?error=exception");
+    }
+});
+
+// Endpoint mapping
+app.MapBlazorHub();
+app.MapRazorPages();
+app.MapFallbackToPage("/_Host");
 
 app.Run();

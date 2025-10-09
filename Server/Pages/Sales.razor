@@ -3,11 +3,14 @@
 @using Microsoft.AspNetCore.Authorization
 @using Server.Models
 @using Server.Services
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
 @inject SalesService SalesService
 @inject StateContainer StateContainer
 @inject NavigationManager Navigation
 @inject ILocalizationService LocalizationService
 @inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @attribute [Authorize]
 
 <div class="container-fluid px-4">
@@ -86,7 +89,7 @@
             else
             {
                 <div class="alert alert-info">
-                    No sales invoices found. Click the "New Sale" button to create one.
+                    No sales invoices found for your account. Click the "New Sale" button to create one.
                 </div>
             }
         </div>
@@ -101,12 +104,31 @@
     private bool isLoading = true;
     private string pageTitle = "Sales";
     private int? categoryId;
+    private string? currentUserId;
+    private int? currentBusinessUnitId;
 
     protected override async Task OnParametersSetAsync()
     {
+        // Get current user and business unit
+        await GetCurrentUserAndBusinessUnit();
+        
         // Get category ID based on route
         await SetCategoryId();
         await LoadSales();
+    }
+
+    private async Task GetCurrentUserAndBusinessUnit()
+    {
+        // Get current user ID
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        currentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        // Get current business unit from localStorage
+        var businessUnitIdString = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentBusinessUnit");
+        if (!string.IsNullOrEmpty(businessUnitIdString) && int.TryParse(businessUnitIdString, out var businessUnitId))
+        {
+            currentBusinessUnitId = businessUnitId;
+        }
     }
 
     private async Task SetCategoryId()
@@ -129,7 +151,7 @@
             "CREDIT-NOTE" => "CN",
             "RETURNS" => "RET",
             "OTHER" => "OTHER",
-            "SUMMAry" => "SUM",
+            "SUMMARY" => "SUM",
             "PRINTING" => "PRINT",
             "BARCODE" => "BAR",
             _ => null
@@ -155,18 +177,16 @@
         try
         {
             isLoading = true;
-            // Get all sales
-            var allSales = await SalesService.GetAllSalesAsync();
             
-            // Filter by category if one is selected
-            if (categoryId.HasValue)
-            {
-                sales = allSales.Where(s => s.SalesCategoryId == categoryId.Value).ToList();
-            }
-            else
-            {
-                sales = allSales;
-            }
+            // Get sales filtered by current user and business unit
+            var allSales = await SalesService.GetAllSalesAsync(
+                businessUnitId: currentBusinessUnitId,
+                userId: currentUserId,
+                includePosted: false,
+                categoryId: categoryId
+            );
+            
+            sales = allSales;
         }
         catch (Exception)
         {
