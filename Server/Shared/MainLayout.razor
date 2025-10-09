@@ -1,7 +1,6 @@
 ﻿@inherits LayoutComponentBase
-@attribute [Authorize]
 
-<PageTitle>Server</PageTitle>
+<PageTitle>Accounting System</PageTitle>
 
 <div class="page">
     <div class="sidebar">
@@ -26,10 +25,21 @@
     main {
         flex: 1;
         overflow-y: auto;
+        margin-left: 280px; /* Add margin to account for fixed sidebar width */
+        padding: 1rem; /* Add some padding for better spacing */
     }
     
     .content {
         width: 100%;
+        max-width: 100%;
+    }
+    
+    .sidebar {
+        width: 280px;
+        position: fixed;
+        height: 100vh;
+        left: 0;
+        top: 0;
     }
     
     @@media (max-width: 640.98px) {

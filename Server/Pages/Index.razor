@@ -1,18 +1,23 @@
 ﻿@page "/"
+@attribute [Authorize]
+@inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
-@inject AuthenticationStateProvider AuthStateProvider
+
+<h1>Welcome to the Accounting System</h1>
+
+<p>Current user: @context.User?.Identity?.Name</p>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
+
+    private AuthenticationState? context;
+
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        if (!authState.User.Identity.IsAuthenticated)
+        if (authenticationState != null)
         {
-            NavigationManager.NavigateTo("/login", forceLoad: true);
-        }
-        else
-        {
-            NavigationManager.NavigateTo("/articles", forceLoad: false);
+            context = await authenticationState;
         }
     }
 }

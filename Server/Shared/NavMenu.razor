@@ -72,7 +72,10 @@
                         <i class="fas fa-store me-2"></i>Business Units
                     </NavLink>
                     <NavLink class="nav-link sub" href="admin/user-business-units">
-                        <i class="fas fa-users-cog me-2"></i>Business Unit Access
+                        <i class="fas fa-users me-2"></i>User Access
+                    </NavLink>
+                    <NavLink class="nav-link sub" href="admin/invoice-number-settings">
+                        <i class="fas fa-hashtag me-2"></i>Invoice Number Format
                     </NavLink>
                 </div>
             }
@@ -242,21 +245,18 @@
     {
         try
         {
-            // First sign out
-            await SignInManager.SignOutAsync();
-
-            // Clear any client-side storage
+            // Clear any client-side storage first
             await JSRuntime.InvokeVoidAsync("localStorage.clear");
             await JSRuntime.InvokeVoidAsync("sessionStorage.clear");
 
-            // Force reload to clear all state and redirect to login
-            await JSRuntime.InvokeVoidAsync("window.location.replace", "/login");
+            // Navigate to logout endpoint
+            await JSRuntime.InvokeVoidAsync("eval", "window.location.href = '/logout'");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Logout error: {ex.Message}");
             // Fallback navigation
-            NavigationManager.NavigateTo("/login", forceLoad: true);
+            await JSRuntime.InvokeVoidAsync("eval", "window.location.href = '/login'");
         }
     }
 

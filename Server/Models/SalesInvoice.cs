@@ -68,6 +68,12 @@ namespace Server.Models
         public int SalesCategoryId { get; set; }
         public virtual SalesCategory SalesCategory { get; set; } = null!;
 
+        [Required]
+        public int BusinessUnitId { get; set; }
+
+        [Required]
+        public int SequentialNumber { get; set; }
+
         // Navigation properties
         [ForeignKey("BuyerId")]
         public virtual Subject Buyer { get; set; } = null!;
@@ -77,6 +83,9 @@ namespace Server.Models
 
         [ForeignKey("LastModifiedByUserId")]
         public virtual ApplicationUser? LastModifiedByUser { get; set; }
+
+        [ForeignKey("BusinessUnitId")]
+        public virtual BusinessUnit? BusinessUnit { get; set; }
 
         public virtual ICollection<SalesInvoiceItem> Items { get; set; } = new List<SalesInvoiceItem>();
     }

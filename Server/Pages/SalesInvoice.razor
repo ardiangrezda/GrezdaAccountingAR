@@ -12,6 +12,7 @@
 @inject ArticleService ArticleService
 @inject SubjectService SubjectService
 @inject SalesCategoryService SalesCategoryService
+@inject BusinessUnitService BusinessUnitService
 @inject ILocalizationService LocalizationService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
@@ -105,10 +106,14 @@
                             <div>
                                 <h2 class="mb-0">@pageTitle</h2>
                                 <small class="text-muted">
-                                    @(IsEdit ? $"Invoice #{sale.InvoiceNumber}" : "New Invoice") 
+                                    @(IsEdit ? $"Invoice #{sale.InvoiceNumber}" : "New Invoice")
                                     @if (currentCategoryName != null)
                                     {
                                         <span class="ms-2 badge bg-info">@currentCategoryName</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(currentBusinessUnitName))
+                                    {
+                                        <span class="ms-2 badge bg-success">@currentBusinessUnitName</span>
                                     }
                                 </small>
                             </div>
@@ -138,8 +143,8 @@
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label class="form-label fw-bold">Invoice Number</label>
-                                            <InputText @bind-Value="sale.InvoiceNumber" 
-                                                       class="form-control" 
+                                            <InputText @bind-Value="sale.InvoiceNumber"
+                                                       class="form-control"
                                                        disabled="@IsEdit" />
                                             <ValidationMessage For="@(() => sale.InvoiceNumber)" class="text-danger" />
                                         </div>
@@ -221,15 +226,15 @@
                                                             <tr>
                                                                 <td class="text-center">@index</td>
                                                                 <td>
-                                                                    <input type="text" 
+                                                                    <input type="text"
                                                                            class="@($"form-control form-control-sm {(string.IsNullOrEmpty(item.Barcode) ? "invalid-field" : "")}")"
-                                                                           @bind="item.Barcode" 
+                                                                           @bind="item.Barcode"
                                                                            @bind:event="oninput"
                                                                            @onblur="() => HandleBarcodeChange(item)" />
                                                                 </td>
                                                                 <td>@item.Description</td>
                                                                 <td>
-                                                                    <input type="number" 
+                                                                    <input type="number"
                                                                            class="@($"form-control form-control-sm text-end {(item.Quantity <= 0 ? "invalid-field" : "")}")"
                                                                            @bind="item.Quantity"
                                                                            @bind:event="oninput"
@@ -237,14 +242,14 @@
                                                                 </td>
                                                                 <td class="text-center">@item.UnitCode</td>
                                                                 <td class="text-end">
-                                                                    <input type="number" class="form-control form-control-sm text-end" 
+                                                                    <input type="number" class="form-control form-control-sm text-end"
                                                                            @bind="item.PriceWithoutVAT"
                                                                            @bind:event="oninput"
                                                                            @onblur="() => CalculateItemTotal(item)"
                                                                            readonly />
                                                                 </td>
                                                                 <td class="text-end">
-                                                                    <input type="number" class="form-control form-control-sm text-end" 
+                                                                    <input type="number" class="form-control form-control-sm text-end"
                                                                            @bind="item.PriceWithVAT"
                                                                            @bind:event="oninput"
                                                                            @onblur="() => CalculateItemTotal(item)"
@@ -252,7 +257,7 @@
                                                                 </td>
                                                                 <td>
                                                                     <div class="input-group input-group-sm">
-                                                                        <input type="number" class="form-control text-end" 
+                                                                        <input type="number" class="form-control text-end"
                                                                                @bind="item.DiscountPercent"
                                                                                @bind:event="oninput"
                                                                                @onblur="() => CalculateItemTotal(item)" />
@@ -375,6 +380,7 @@
     private bool showBuyerSearch = false;
     private EditContext? editContext;
     private string? currentCategoryName;
+    private string? currentBusinessUnitName;
 
     protected override async Task OnInitializedAsync()
     {
@@ -391,6 +397,32 @@
             // Get current user ID
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            // Get current business unit from localStorage
+            var currentBusinessUnitId = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentBusinessUnit");
+            int businessUnitId = 0;
+            
+            if (!string.IsNullOrEmpty(currentBusinessUnitId) && int.TryParse(currentBusinessUnitId, out businessUnitId))
+            {
+                // Load business unit name for display
+                try
+                {
+                    var businessUnits = await BusinessUnitService.GetAllAsync();
+                    var businessUnit = businessUnits?.FirstOrDefault(bu => bu.Id == businessUnitId);
+                    currentBusinessUnitName = businessUnit?.Name ?? $"Business Unit {businessUnitId}";
+                }
+                catch (Exception ex)
+                {
+                    await JSRuntime.InvokeVoidAsync("console.error", "Error loading business unit name", ex.Message);
+                    currentBusinessUnitName = $"Business Unit {businessUnitId}";
+                }
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "No business unit selected. Please log in again.");
+                Navigation.NavigateTo("/login");
+                return;
+            }
 
             if (!IsEdit)
             {
@@ -411,7 +443,8 @@
                     Items = new List<SalesInvoiceItem>(),
                     CreatedByUserId = userId ?? throw new InvalidOperationException("User is not authenticated"),
                     CreatedAt = DateTime.UtcNow,
-                    SalesCategoryId = categoryId
+                    SalesCategoryId = categoryId,
+                    BusinessUnitId = businessUnitId
                 };
             }
             else if (Id.HasValue)
@@ -421,7 +454,6 @@
                     var loadedSale = await SalesService.GetSaleByIdAsync(Id.Value);
                     if (loadedSale != null)
                     {
-                        // Handle navigation properties properly to avoid serialization issues
                         sale = new Server.Models.SalesInvoice
                         {
                             Id = loadedSale.Id,
@@ -440,6 +472,7 @@
                             LastModifiedByUserId = loadedSale.LastModifiedByUserId,
                             LastModifiedAt = loadedSale.LastModifiedAt,
                             SalesCategoryId = loadedSale.SalesCategoryId,
+                            BusinessUnitId = loadedSale.BusinessUnitId,
                             TotalWithoutVAT = loadedSale.TotalWithoutVAT,
                             TotalVATAmount = loadedSale.TotalVATAmount,
                             TotalWithVAT = loadedSale.TotalWithVAT,
@@ -447,7 +480,6 @@
                             Items = new List<SalesInvoiceItem>()
                         };
 
-                        // Copy each item to avoid navigation property issues
                         if (loadedSale.Items != null)
                         {
                             foreach (var sourceItem in loadedSale.Items)
@@ -520,17 +552,31 @@
         StateHasChanged();
     }
 
-    private bool ValidateForm()
-    {
-        if (editContext == null) return false;
-        return editContext.Validate();
-    }
-
     private async Task HandleValidSubmit()
     {
         try
         {
             if (isSaving) return;
+
+            // Get current user ID
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            // Ensure BusinessUnitId is set before validation
+            if (sale.BusinessUnitId <= 0)
+            {
+                var currentBusinessUnitId = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentBusinessUnit");
+                if (!string.IsNullOrEmpty(currentBusinessUnitId) && int.TryParse(currentBusinessUnitId, out var businessUnitId))
+                {
+                    sale.BusinessUnitId = businessUnitId;
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "No business unit selected. Please log in again.");
+                    Navigation.NavigateTo("/login");
+                    return;
+                }
+            }
 
             if (!await ValidateInvoice()) return;
 
@@ -551,7 +597,7 @@
                 }
                 else
                 {
-                    await SalesService.UpdateSaleAsync(sale);
+                    await SalesService.UpdateSaleAsync(sale, userId); // Pass user ID
                     await JSRuntime.InvokeVoidAsync("alert", "Invoice updated successfully!");
                 }
 
@@ -608,7 +654,6 @@
 
     private string GetCategoryRoute(string code)
     {
-        // Convert category code to route
         return code.ToLower() switch
         {
             "dom" => "sales/domestic",
@@ -657,29 +702,18 @@
         {
             if (item.PriceWithVAT <= 0 || item.Quantity <= 0) return;
 
-            // When price with VAT is changed, recalculate price without VAT
             item.PriceWithoutVAT = Math.Round(item.PriceWithVAT / (1 + (item.VATPercent / 100)), 2);
-
-            // Calculate base value without VAT
             item.ValueWithoutVAT = Math.Round(item.Quantity * item.PriceWithoutVAT, 2);
-
-            // Calculate discount amount from the net price
             item.DiscountAmount = Math.Round(item.ValueWithoutVAT * (item.DiscountPercent / 100), 2);
-
-            // Calculate net value after discount
             decimal netValueAfterDiscount = item.ValueWithoutVAT - item.DiscountAmount;
-
-            // Calculate VAT amount on the discounted value
             item.VATAmount = Math.Round(netValueAfterDiscount * (item.VATPercent / 100), 2);
 
-            // For Value Including VAT, use direct multiplication when there's no discount
             if (item.DiscountPercent == 0)
             {
                 item.ValueWithVAT = item.Quantity * item.PriceWithVAT;
             }
             else
             {
-                // If there's a discount, calculate based on discounted value plus VAT
                 item.ValueWithVAT = netValueAfterDiscount + item.VATAmount;
             }
 
@@ -711,12 +745,18 @@
                 ValueWithVAT = 0,
                 ValueWithoutVAT = 0,
                 DiscountAmount = 0,
-                VATAmount = 0
+                VATAmount = 0,
+                ArticleId = 0,
+                ArticleCode = "",
+                Description = "",
+                UnitId = 0,
+                UnitCode = "",
+                CurrencyId = 0,
+                Barcode = ""
             };
             
             sale.Items.Add(newItem);
             
-            // Create new EditContext after modifying the model
             editContext = new EditContext(sale);
             editContext.OnValidationStateChanged += ValidationStateChanged;
             
@@ -757,7 +797,7 @@
                 item.ArticleId = article.Id;
                 item.ArticleCode = article.Code;
                 item.Description = article.Description;
-                item.PriceWithVAT = article.Price;  // Assuming price from article includes VAT
+                item.PriceWithVAT = article.Price;
                 item.UnitId = article.UnitId;
                 item.UnitCode = article.Unit?.Code ?? "";
                 item.VATPercent = article.VATTable?.VATRate ?? 0;
@@ -778,8 +818,6 @@
     private async Task HandleBuyerSearch(ChangeEventArgs e)
     {
         var searchTerm = e.Value?.ToString();
-
-        // Update the buyer name as user types
         sale.BuyerName = searchTerm ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(searchTerm))
@@ -789,7 +827,6 @@
             return;
         }
 
-        // Search for buyers
         buyerSearchResults = await SubjectService.SearchBuyersAsync(searchTerm);
         showBuyerSearch = true;
         StateHasChanged();
@@ -803,7 +840,6 @@
         sale.BuyerCode = buyer.Code;
         sale.BuyerName = buyer.SubjectName;
 
-        // Hide the search results
         showBuyerSearch = false;
         buyerSearchResults.Clear();
         StateHasChanged();
@@ -828,6 +864,12 @@
         if (sale.BuyerId <= 0)
         {
             await JSRuntime.InvokeVoidAsync("alert", "Please select a buyer.");
+            return false;
+        }
+
+        if (sale.BusinessUnitId <= 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Business unit is required. Please log out and log in again.");
             return false;
         }
 

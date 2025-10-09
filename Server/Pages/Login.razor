@@ -1,127 +1,331 @@
 ﻿@page "/login"
-@using Microsoft.AspNetCore.Identity
-@using Server.Models
+@layout LoginLayout
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
 @using System.ComponentModel.DataAnnotations
-@attribute [AllowAnonymous]
+@using Microsoft.AspNetCore.Components.Forms
+@using Server.Services
 @inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
-@inject AuthenticationStateProvider AuthStateProvider
+@inject BusinessUnitService BusinessUnitService
+@inject IJSRuntime JSRuntime
+@attribute [AllowAnonymous]
 
-<PageTitle>Login - Accounting System</PageTitle>
+<div class="login-container">
+    <div class="login-box">
+        <h3 class="text-center mb-4">Accounting System</h3>
+        
+        <EditForm Model="@loginModel" OnValidSubmit="@HandleValidSubmit" OnInvalidSubmit="@HandleInvalidSubmit">
+            <DataAnnotationsValidator />
 
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-4">
-            <div class="card mt-5">
-                <div class="card-header">
-                    <h3 class="text-center">Accounting System</h3>
-                </div>
-                <div class="card-body">
-                    <EditForm Model="loginModel" OnValidSubmit="@HandleLoginAsync">
-                        <DataAnnotationsValidator />
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <InputText @bind-Value="loginModel.Email" class="form-control" placeholder="Enter your email" />
+                <ValidationMessage For="@(() => loginModel.Email)" />
+            </div>
 
-                        @if (!string.IsNullOrEmpty(errorMessage))
-                        {
-                            <div class="alert alert-danger">@errorMessage</div>
-                        }
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <InputText type="password" @bind-Value="loginModel.Password" class="form-control" placeholder="Enter your password" />
+                <ValidationMessage For="@(() => loginModel.Password)" />
+            </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Email</label>
-                            <InputText @bind-Value="loginModel.Email" class="form-control" placeholder="admin@accounting.com" />
-                            <ValidationMessage For="@(() => loginModel.Email)" />
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Password</label>
-                            <InputText type="password" @bind-Value="loginModel.Password" class="form-control" placeholder="Admin123!" />
-                            <ValidationMessage For="@(() => loginModel.Password)" />
-                        </div>
-
-                        <div class="mb-3 form-check">
-                            <InputCheckbox @bind-Value="loginModel.RememberMe" class="form-check-input" />
-                            <label class="form-check-label">Remember me</label>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary w-100" disabled="@isLoading">
-                            @if (isLoading)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2"></span>
-                            }
-                            Login
-                        </button>
-                    </EditForm>
-                </div>
-                <div class="card-footer text-center">
-                    <small class="text-muted">Demo: admin@accounting.com / Admin123!</small>
+            <div class="mb-3">
+                <div class="form-check">
+                    <InputCheckbox @bind-Value="loginModel.RememberMe" class="form-check-input" id="rememberMe" />
+                    <label class="form-check-label" for="rememberMe">Remember Me</label>
                 </div>
             </div>
-        </div>
+
+            @if (showBusinessUnitSelect)
+            {
+                <div class="mb-3">
+                    <label class="form-label">Business Unit</label>
+                    <select @bind="selectedBusinessUnitId" class="form-control">
+                        <option value="">Select Business Unit</option>
+                        @foreach (var unit in availableBusinessUnits)
+                        {
+                            <option value="@unit.Id">@unit.Name</option>
+                        }
+                    </select>
+                    @if (string.IsNullOrEmpty(selectedBusinessUnitId))
+                    {
+                        <div class="text-danger"><small>Please select a business unit</small></div>
+                    }
+                </div>
+                
+                <button type="button" class="btn btn-success w-100 mb-2" @onclick="HandleBusinessUnitSelection">
+                    Continue with Selected Business Unit
+                </button>
+                
+                <button type="button" class="btn btn-secondary w-100" @onclick="GoBackToLogin">
+                    Back to Login
+                </button>
+            }
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">@errorMessage</div>
+            }
+
+            <button type="submit" class="btn btn-primary w-100" disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                }
+                Login
+            </button>
+        </EditForm>
     </div>
 </div>
 
 @code {
     private LoginViewModel loginModel = new();
-    private string errorMessage = string.Empty;
-    private bool isLoading = false;
+    private string? errorMessage;
+    private bool isSaving;
+    private bool showBusinessUnitSelect;
+    private List<BusinessUnit> availableBusinessUnits = new();
+    private EditContext editContext = null!;
+    private string selectedBusinessUnitId = string.Empty;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnInitialized()
     {
-        if (firstRender)
+        editContext = new EditContext(loginModel);
+        
+        // Check for error messages from URL parameters
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var error = query["error"];
+        
+        if (!string.IsNullOrEmpty(error))
         {
-            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            if (authState.User.Identity?.IsAuthenticated ?? false)
+            errorMessage = error switch
             {
-                NavigationManager.NavigateTo("/", forceLoad: true);
-            }
+                "failed" => "Login failed. Please check your credentials.",
+                "missing" => "Email and password are required.",
+                "exception" => "An error occurred during login. Please try again.",
+                _ => "An unknown error occurred."
+            };
         }
     }
 
-    private async Task HandleLoginAsync()
+    private async Task HandleValidSubmit()
     {
-        if (!string.IsNullOrEmpty(loginModel.Email) && !string.IsNullOrEmpty(loginModel.Password))
+        try
         {
-            isLoading = true;
-            errorMessage = string.Empty;
+            isSaving = true;
+            errorMessage = null;
+            StateHasChanged();
 
+            if (string.IsNullOrWhiteSpace(loginModel.Email))
+            {
+                errorMessage = "Email is required";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(loginModel.Password))
+            {
+                errorMessage = "Password is required";
+                return;
+            }
+
+            // Verify credentials first without signing in
+            var user = await UserManager.FindByEmailAsync(loginModel.Email);
+            if (user == null)
+            {
+                errorMessage = "Invalid email or password.";
+                return;
+            }
+
+            var passwordValid = await UserManager.CheckPasswordAsync(user, loginModel.Password);
+            if (!passwordValid)
+            {
+                errorMessage = "Invalid email or password.";
+                return;
+            }
+
+            // Get available business units before signing in
+            var isAdmin = await UserManager.IsInRoleAsync(user, "Admin");
+            availableBusinessUnits = await BusinessUnitService.GetUserBusinessUnitsAsync(user.Id, isAdmin);
+            
+            if (!availableBusinessUnits.Any())
+            {
+                errorMessage = "No business units assigned to this user. Please contact an administrator.";
+                return;
+            }
+
+            if (availableBusinessUnits.Count == 1)
+            {
+                // Auto-select single business unit and sign in
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "currentBusinessUnit", availableBusinessUnits[0].Id.ToString());
+                await PerformSignIn();
+            }
+            else
+            {
+                // Show business unit selection for multiple units
+                showBusinessUnitSelect = true;
+                StateHasChanged();
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred during login: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleBusinessUnitSelection()
+    {
+        if (!string.IsNullOrEmpty(selectedBusinessUnitId))
+        {
             try
             {
-                var result = await SignInManager.PasswordSignInAsync(
-                    loginModel.Email,
-                    loginModel.Password,
-                    loginModel.RememberMe,
-                    lockoutOnFailure: false);
-
-                if (result.Succeeded)
-                {
-                    NavigationManager.NavigateTo("/", forceLoad: true);
-                }
-                else
-                {
-                    errorMessage = "Invalid email or password.";
-                }
+                // Store the business unit
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "currentBusinessUnit", selectedBusinessUnitId);
+                await PerformSignIn();
             }
             catch (Exception ex)
             {
-                errorMessage = "An error occurred during login.";
-                Console.WriteLine($"Login error: {ex.Message}");
-            }
-            finally
-            {
-                isLoading = false;
+                errorMessage = $"Error: {ex.Message}";
+                StateHasChanged();
             }
         }
+        else
+        {
+            errorMessage = "Please select a business unit.";
+            StateHasChanged();
+        }
+    }
+
+    private void GoBackToLogin()
+    {
+        showBusinessUnitSelect = false;
+        selectedBusinessUnitId = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task PerformSignIn()
+    {
+        try
+        {
+            // Use JavaScript to submit a form to the /Account/Login endpoint
+            // This avoids the "headers already started" issue
+            await JSRuntime.InvokeVoidAsync("submitLoginForm", loginModel.Email, loginModel.Password, loginModel.RememberMe);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error during sign in: {ex.Message}";
+        }
+    }
+
+    private async Task HandleInvalidSubmit()
+    {
+        errorMessage = $"Form validation failed: {string.Join(", ", editContext.GetValidationMessages())}";
+        await Task.CompletedTask;
+    }
+
+    public class LoginViewModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+        
+        [Required]
+        public string Password { get; set; } = string.Empty;
+        
+        public bool RememberMe { get; set; }
     }
 }
 
-public class LoginViewModel
-{
-    [Required(ErrorMessage = "Email is required")]
-    [EmailAddress(ErrorMessage = "Invalid email address")]
-    public string Email { get; set; } = string.Empty;
+<style>
+    .login-container {
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+        padding: 20px;
+    }
 
-    [Required(ErrorMessage = "Password is required")]
-    public string Password { get; set; } = string.Empty;
+    .login-box {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 400px;
+    }
 
-    public bool RememberMe { get; set; }
-}
+    .form-label {
+        font-weight: 500;
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 0.95rem;
+    }
+
+    .form-control:focus {
+        border-color: #1a237e;
+        box-shadow: 0 0 0 0.2rem rgba(26, 35, 126, 0.25);
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        font-weight: 500;
+    }
+
+    h3 {
+        color: #1a237e;
+        font-weight: 600;
+        margin-bottom: 2rem;
+    }
+</style>
+
+<script>
+    window.submitLoginForm = function(email, password, rememberMe) {
+        // Create a form dynamically and submit it
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/Account/Login';
+        
+        var emailInput = document.createElement('input');
+        emailInput.type = 'hidden';
+        emailInput.name = 'email';
+        emailInput.value = email;
+        form.appendChild(emailInput);
+        
+        var passwordInput = document.createElement('input');
+        passwordInput.type = 'hidden';
+        passwordInput.name = 'password';
+        passwordInput.value = password;
+        form.appendChild(passwordInput);
+        
+        var rememberMeInput = document.createElement('input');
+        rememberMeInput.type = 'hidden';
+        rememberMeInput.name = 'rememberMe';
+        rememberMeInput.value = rememberMe.toString();
+        form.appendChild(rememberMeInput);
+        
+        var returnUrlInput = document.createElement('input');
+        returnUrlInput.type = 'hidden';
+        returnUrlInput.name = 'returnUrl';
+        returnUrlInput.value = '/';
+        form.appendChild(returnUrlInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    };
+</script>
