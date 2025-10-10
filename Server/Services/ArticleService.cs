@@ -218,5 +218,44 @@ namespace Server.Services
                 .OrderBy(c => c.Name)
                 .ToListAsync();
         }
+
+        public async Task<bool> UpdateStockQuantitiesAsync(List<(int articleId, decimal quantityToSubtract)> stockUpdates)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                foreach (var (articleId, quantityToSubtract) in stockUpdates)
+                {
+                    var article = await _context.Articles.FindAsync(articleId);
+                    if (article == null)
+                    {
+                        throw new InvalidOperationException($"Article with ID {articleId} not found");
+                    }
+
+                    // Subtract the quantity (can go negative)
+                    article.StockQuantity -= (int)quantityToSubtract;
+                    article.UpdatedAt = DateTime.UtcNow;
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task<List<Article>> GetNegativeStockArticlesAsync()
+        {
+            return await _context.Articles
+                .Include(a => a.Unit)
+                .Include(a => a.Currency)
+                .Where(a => a.IsActive && a.StockQuantity < 0)
+                .OrderBy(a => a.StockQuantity)
+                .ToListAsync();
+        }
     }
 }

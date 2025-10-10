@@ -8,11 +8,13 @@ namespace Server.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly BusinessUnitStateContainer _stateContainer;
+        private readonly ArticleService _articleService;
 
-        public SalesService(ApplicationDbContext context, BusinessUnitStateContainer stateContainer)
+        public SalesService(ApplicationDbContext context, BusinessUnitStateContainer stateContainer, ArticleService articleService)
         {
             _context = context;
             _stateContainer = stateContainer;
+            _articleService = articleService;
         }
 
         public async Task<List<SalesInvoice>> GetAllSalesAsync(int? businessUnitId = null, string? userId = null, bool includePosted = false, int? categoryId = null)
@@ -186,18 +188,35 @@ namespace Server.Services
                 sale.SalesCategoryId = domesticCategory?.Id ?? 1;
             }
 
-           var (invoiceNumber, sequentialNumber) = await GenerateInvoiceNumberAsync(businessUnitId, sale.SalesCategoryId);
+            // STEP 1: Generate invoice number and sequential number atomically
+            var (invoiceNumber, sequentialNumber) = await GenerateInvoiceNumberAsync(businessUnitId, sale.SalesCategoryId);
             
             sale.InvoiceNumber = invoiceNumber;
             sale.SequentialNumber = sequentialNumber;
 
+            // STEP 2: Calculate totals
             sale.TotalWithoutVAT = sale.Items?.Sum(item => item.ValueWithoutVAT) ?? 0;
             sale.TotalVATAmount = sale.Items?.Sum(item => item.VATAmount) ?? 0;
             sale.TotalWithVAT = sale.Items?.Sum(item => item.ValueWithVAT) ?? 0;
             sale.TotalDiscountAmount = sale.Items?.Sum(item => item.DiscountAmount) ?? 0;
 
+            // STEP 3: Save the invoice to database
             _context.SalesInvoices.Add(sale);
             await _context.SaveChangesAsync();
+
+            // STEP 4: Reduce stock quantities for all items (allows negative stock)
+            if (sale.Items != null && sale.Items.Any())
+            {
+                var stockUpdates = sale.Items
+                    .Where(item => item.ArticleId > 0 && item.Quantity > 0)
+                    .Select(item => (item.ArticleId, item.Quantity))
+                    .ToList();
+
+                if (stockUpdates.Any())
+                {
+                    await _articleService.UpdateStockQuantitiesAsync(stockUpdates);
+                }
+            }
 
             return sale;
         }

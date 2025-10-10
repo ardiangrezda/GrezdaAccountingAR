@@ -866,6 +866,41 @@
         return true;
     }
 
+    private async Task<bool> ValidateStockAvailability()
+    {
+        if (sale.Items == null || !sale.Items.Any()) return true;
+
+        var stockRequests = sale.Items
+            .Where(item => item.ArticleId > 0)
+            .Select(item => (item.ArticleId, item.Quantity))
+            .ToList();
+
+        if (!stockRequests.Any()) return true;
+
+        try
+        {
+            var stockCheck = await ArticleService.CheckStockAvailabilityAsync(stockRequests);
+            var insufficientStock = stockCheck.Where(s => !s.hasEnoughStock).ToList();
+
+            if (insufficientStock.Any())
+            {
+                var errorMessage = "Insufficient stock for the following articles:\\n" +
+                    string.Join("\\n", insufficientStock.Select(s => 
+                        $"- {s.articleCode}: Available {s.availableStock}, Required {s.requestedStock}"));
+                
+                await JSRuntime.InvokeVoidAsync("alert", errorMessage);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error checking stock availability: {ex.Message}");
+            return false;
+        }
+    }
+
     private async Task LoadCategoryName()
     {
         try
