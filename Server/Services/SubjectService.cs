@@ -126,7 +126,6 @@ namespace Server.Services
             var subject = await _context.Subjects.FindAsync(id);
             if (subject == null) return false;
 
-            // Soft delete
             subject.IsActive = false;
             subject.UpdatedAt = DateTime.UtcNow;
 

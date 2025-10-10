@@ -17,7 +17,6 @@ namespace Server.Services
         {
             using var context = _contextFactory.CreateDbContext();
             return await context.BusinessUnits
-                .Where(bu => bu.IsActive)
                 .OrderBy(bu => bu.Name)
                 .ToListAsync();
         }
@@ -36,12 +35,50 @@ namespace Server.Services
             return businessUnit;
         }
 
+        public async Task<bool> CreateBusinessUnitAsync(BusinessUnit businessUnit)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            var existingUnit = await context.BusinessUnits
+                .FirstOrDefaultAsync(bu => bu.Code == businessUnit.Code);
+
+            if (existingUnit != null)
+            {
+                throw new InvalidOperationException($"Business unit with code '{businessUnit.Code}' already exists.");
+            }
+
+            businessUnit.CreatedAt = DateTime.UtcNow;
+            context.BusinessUnits.Add(businessUnit);
+            await context.SaveChangesAsync();
+
+            return true;
+        }
+
         public async Task UpdateAsync(BusinessUnit businessUnit)
         {
             using var context = await _contextFactory.CreateDbContextAsync();
             businessUnit.LastModifiedAt = DateTime.UtcNow;
             context.BusinessUnits.Update(businessUnit);
             await context.SaveChangesAsync();
+        }
+
+        public async Task<bool> UpdateBusinessUnitAsync(BusinessUnit businessUnit)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            var existingUnit = await context.BusinessUnits
+                .FirstOrDefaultAsync(bu => bu.Code == businessUnit.Code && bu.Id != businessUnit.Id);
+
+            if (existingUnit != null)
+            {
+                throw new InvalidOperationException($"Another business unit with code '{businessUnit.Code}' already exists.");
+            }
+
+            businessUnit.LastModifiedAt = DateTime.UtcNow;
+            context.BusinessUnits.Update(businessUnit);
+            await context.SaveChangesAsync();
+
+            return true;
         }
 
         public async Task DeleteAsync(int id)
@@ -61,7 +98,6 @@ namespace Server.Services
 
             if (isAdmin)
             {
-                // Admin can access all active business units
                 return await context.BusinessUnits
                     .Where(bu => bu.IsActive)
                     .OrderBy(bu => bu.Name)
@@ -69,7 +105,6 @@ namespace Server.Services
             }
             else
             {
-                // Regular user can only access assigned business units
                 return await context.UserBusinessUnits
                     .Where(ub => ub.UserId == userId)
                     .Select(ub => ub.BusinessUnit)

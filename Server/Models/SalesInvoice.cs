@@ -9,7 +9,6 @@ namespace Server.Models
         [Key]
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "Invoice number is required")]
         [StringLength(50)]
         public string InvoiceNumber { get; set; } = string.Empty;
 
@@ -74,7 +73,6 @@ namespace Server.Models
         [Required]
         public int SequentialNumber { get; set; }
 
-        // Navigation properties
         [ForeignKey("BuyerId")]
         public virtual Subject Buyer { get; set; } = null!;
 

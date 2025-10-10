@@ -151,13 +151,11 @@
     private string selectedCategory = string.Empty;
     private bool showInactive = false;
 
-    // Localized strings
     private string pageTitle = string.Empty;
     private string newArticleText = string.Empty;
     private string searchPlaceholder = string.Empty;
     private string searchButtonText = string.Empty;
 
-    // Add these localized string properties
     private string codeHeader = string.Empty;
     private string barcodeHeader = string.Empty;
     private string descriptionHeader = string.Empty;
@@ -171,23 +169,19 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Get current user
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
             currentUser = await UserManager.GetUserAsync(authState.User);
         }
 
-        // Get default language ID once
         var languageId = await LocalizationService.GetDefaultLanguageId();
 
-        // Load localized strings using synchronous GetString
         pageTitle = LocalizationService.GetString("STRING_00001", languageId) ?? "Article Management";
         newArticleText = LocalizationService.GetString("STRING_00002", languageId) ?? "New Article";
         searchPlaceholder = LocalizationService.GetString("STRING_00003", languageId) ?? "Search articles...";
         searchButtonText = LocalizationService.GetString("STRING_00004", languageId) ?? "Search";
 
-        // Load table headers
         codeHeader = LocalizationService.GetString("STRING_00033", languageId) ?? "Code";
         barcodeHeader = LocalizationService.GetString("STRING_00010", languageId) ?? "Barcode";
         descriptionHeader = LocalizationService.GetString("STRING_00042", languageId) ?? "Description";
@@ -199,7 +193,6 @@
         statusHeader = LocalizationService.GetString("STRING_00038", languageId) ?? "Status";
         actionsHeader = LocalizationService.GetString("STRING_00039", languageId) ?? "Actions";
 
-        // Load data
         await LoadArticles();
         await LoadCategories();
     }

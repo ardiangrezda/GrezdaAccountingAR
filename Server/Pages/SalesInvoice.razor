@@ -142,14 +142,6 @@
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label class="form-label fw-bold">Invoice Number</label>
-                                            <InputText @bind-Value="sale.InvoiceNumber"
-                                                       class="form-control"
-                                                       disabled="@IsEdit" />
-                                            <ValidationMessage For="@(() => sale.InvoiceNumber)" class="text-danger" />
-                                        </div>
-
-                                        <div class="mb-3">
                                             <label class="form-label fw-bold">Invoice Date</label>
                                             <InputDate @bind-Value="sale.InvoiceDate" class="form-control" />
                                             <ValidationMessage For="@(() => sale.InvoiceDate)" class="text-danger" />
@@ -394,17 +386,14 @@
             loading = true;
             pageTitle = IsEdit ? "Edit Invoice" : "Create Invoice";
 
-            // Get current user ID
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            // Get current business unit from localStorage
             var currentBusinessUnitId = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentBusinessUnit");
             int businessUnitId = 0;
             
             if (!string.IsNullOrEmpty(currentBusinessUnitId) && int.TryParse(currentBusinessUnitId, out businessUnitId))
             {
-                // Load business unit name for display
                 try
                 {
                     var businessUnits = await BusinessUnitService.GetAllAsync();
@@ -426,13 +415,10 @@
 
             if (!IsEdit)
             {
-                // Try to get the category ID from session storage
                 var storedCategoryId = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "selectedSalesCategoryId");
                 
-                // Clear it immediately after reading
                 await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "selectedSalesCategoryId");
 
-                // Parse the stored category ID, defaulting to 1 (DOM) if not found
                 var categoryId = !string.IsNullOrEmpty(storedCategoryId) && int.TryParse(storedCategoryId, out var id) 
                     ? id 
                     : 1;
@@ -528,11 +514,9 @@
                 }
             }
 
-            // Create a new EditContext with the loaded or new sale
             editContext = new EditContext(sale);
             editContext.OnValidationStateChanged += ValidationStateChanged;
 
-            // Load category name
             await LoadCategoryName();
         }
         catch (Exception ex)
@@ -558,11 +542,9 @@
         {
             if (isSaving) return;
 
-            // Get current user ID
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            // Ensure BusinessUnitId is set before validation
             if (sale.BusinessUnitId <= 0)
             {
                 var currentBusinessUnitId = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentBusinessUnit");
@@ -585,7 +567,6 @@
 
             try
             {
-                // Get the current category before saving
                 var categories = await StateContainer.GetSalesCategoriesAsync();
                 var category = categories.FirstOrDefault(c => c.Id == sale.SalesCategoryId);
                 var categoryRoute = category?.Code != null ? GetCategoryRoute(category.Code) : "sales";
@@ -597,11 +578,10 @@
                 }
                 else
                 {
-                    await SalesService.UpdateSaleAsync(sale, userId); // Pass user ID
+                    await SalesService.UpdateSaleAsync(sale, userId);
                     await JSRuntime.InvokeVoidAsync("alert", "Invoice updated successfully!");
                 }
 
-                // Navigate back to the specific category page
                 Navigation.NavigateTo($"/{categoryRoute}");
             }
             catch (Exception ex)
@@ -624,29 +604,24 @@
     {
         try
         {
-            // Get the current category code based on the sale's category ID
             var categories = await StateContainer.GetSalesCategoriesAsync();
             var category = categories.FirstOrDefault(c => c.Id == sale.SalesCategoryId);
             
             if (category?.Code != null)
             {
-                // Keep the category in session storage
                 await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "currentSalesCategory", category.Code);
                 
-                // Navigate to the specific category route
                 var categoryRoute = GetCategoryRoute(category.Code);
                 Navigation.NavigateTo($"/{categoryRoute}");
             }
             else
             {
-                // Fallback to general sales page if category not found
                 await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "currentSalesCategory");
                 Navigation.NavigateTo("/sales");
             }
         }
         catch (Exception ex)
         {
-            // If anything goes wrong, fall back to the general sales page
             await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "currentSalesCategory");
             Navigation.NavigateTo("/sales");
         }
@@ -855,12 +830,6 @@
 
     private async Task<bool> ValidateInvoice()
     {
-        if (string.IsNullOrEmpty(sale.InvoiceNumber))
-        {
-            await JSRuntime.InvokeVoidAsync("alert", "Invoice number is required.");
-            return false;
-        }
-
         if (sale.BuyerId <= 0)
         {
             await JSRuntime.InvokeVoidAsync("alert", "Please select a buyer.");

@@ -9,12 +9,12 @@ namespace Server.Models
         [Key]
         public int Id { get; set; }
 
-        [Required]
-        [StringLength(50)]
+        [Required(ErrorMessage = "Business unit code is required")]
+        [StringLength(50, ErrorMessage = "Code cannot exceed 50 characters")]
         public string Code { get; set; } = string.Empty;
 
-        [Required]
-        [StringLength(100)]
+        [Required(ErrorMessage = "Business unit name is required")]
+        [StringLength(100, ErrorMessage = "Name cannot exceed 100 characters")]
         public string Name { get; set; } = string.Empty;
 
         [StringLength(255)]

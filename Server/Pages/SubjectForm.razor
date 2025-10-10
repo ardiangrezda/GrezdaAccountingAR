@@ -186,7 +186,6 @@
     [Parameter]
     public int? Id { get; set; }
 
-    // Add this property
     private bool IsEdit => Id.HasValue;
 
     private Subject subject = new();
@@ -194,7 +193,6 @@
 
     private string pageTitle = string.Empty;
 
-    // Add these properties
     private string basicInfoHeader = string.Empty;
     private string contactInfoHeader = string.Empty;
     private string subjectTypesHeader = string.Empty;
@@ -210,7 +208,6 @@
     private string accountingInfoHeader = string.Empty;
     private string codeLabel = string.Empty;
 
-    // Add these properties for form labels
     private string subjectTypeLabel = string.Empty;
     private string accountsReceivableLabel = string.Empty;
     private string accountsPayableLabel = string.Empty;
@@ -225,10 +222,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Get default language ID once
         var languageId = await LocalizationService.GetDefaultLanguageId();
 
-        // Load localized strings
         pageTitle = LocalizationService.GetString("STRING_00097", languageId) ?? "Subject Form";
         codeLabel = LocalizationService.GetString("STRING_00033", languageId) ?? "Code";
         subjectNameLabel = LocalizationService.GetString("STRING_00034", languageId) ?? "Name";
@@ -244,7 +239,6 @@
         accountsPayableLabel = LocalizationService.GetString("STRING_00053", languageId) ?? "Accounts Payable";
         mobileSalesLabel = LocalizationService.GetString("STRING_00058", languageId) ?? "Mobile Sales";
         
-        // Add the missing checkbox labels
         buyerLabel = LocalizationService.GetString("STRING_00054", languageId) ?? "Buyer";
         supplierLabel = LocalizationService.GetString("STRING_00055", languageId) ?? "Supplier";
         cashOnlyBuyerLabel = LocalizationService.GetString("STRING_00056", languageId) ?? "Cash Only Buyer";
@@ -254,7 +248,6 @@
         activeLabel = LocalizationService.GetString("STRING_00061", languageId) ?? "Active";
         subjectTypeLabel = LocalizationService.GetString("STRING_00051", languageId) ?? "Subject Type";
     
-        // Load subject if editing
         if (IsEdit && Id.HasValue)
         {
             var existingSubject = await SubjectService.GetSubjectByIdAsync(Id.Value);

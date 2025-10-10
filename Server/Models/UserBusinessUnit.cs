@@ -12,7 +12,6 @@ namespace Server.Models
         public int BusinessUnitId { get; set; }
         public BusinessUnit BusinessUnit { get; set; } = null!;
 
-        // Optional: Add additional fields
         public DateTime AssignedAt { get; set; } = DateTime.UtcNow;
         public bool IsActive { get; set; } = true;
     }

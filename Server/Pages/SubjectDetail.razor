@@ -214,10 +214,8 @@
             Navigation.NavigateTo("/subjects");
         }
 
-        // Get default language ID once
         var languageId = await LocalizationService.GetDefaultLanguageId();
 
-        // Load all localized strings using synchronous GetString
         pageTitle = LocalizationService.GetString("STRING_00076", languageId) ?? "Subject Details";
         basicInfoHeader = LocalizationService.GetString("STRING_00077", languageId) ?? "Basic Information";
         contactInfoHeader = LocalizationService.GetString("STRING_00078", languageId) ?? "Contact Information";

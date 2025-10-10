@@ -80,13 +80,11 @@
                 });
             }
             
-            // Run immediately and also after a short delay
             hideNavigation();
             setTimeout(hideNavigation, 100);
             setTimeout(hideNavigation, 500);
         });
         
-        // Also run on Blazor component updates
         window.addEventListener('beforeunload', function() {
             // Clear any cached content
             if ('caches' in window) {

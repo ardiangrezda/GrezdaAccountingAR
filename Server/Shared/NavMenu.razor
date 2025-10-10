@@ -135,7 +135,6 @@
     {
         showShitjeSubMenu = !showShitjeSubMenu;
         
-        // If expanding the menu and currently on a non-sales page, navigate to sales
         if (showShitjeSubMenu && !NavigationManager.Uri.ToLower().Contains("/sales"))
         {
             NavigationManager.NavigateTo("/sales");
@@ -146,7 +145,6 @@
     {
         showAdminSubMenu = !showAdminSubMenu;
         
-        // If expanding the menu and currently on a non-admin page, navigate to admin
         if (showAdminSubMenu && !NavigationManager.Uri.ToLower().Contains("/admin"))
         {
             NavigationManager.NavigateTo("/admin");
@@ -165,7 +163,6 @@
         {
             var currentPath = e.Location.ToLower();
             
-            // Handle sales section
             if (!currentPath.Contains("/sales"))
             {
                 showShitjeSubMenu = false;
@@ -174,12 +171,10 @@
             }
             else
             {
-                // Auto-expand submenu when in sales section
                 showShitjeSubMenu = true;
                 
                 try
                 {
-                    // Check if we're on a category listing page
                     foreach (var category in salesCategories)
                     {
                         var categoryRoute = GetCategoryRoute(category.Code).ToLower();
@@ -191,7 +186,6 @@
                         }
                     }
 
-                    // If not on a category page, get category from session storage
                     if (currentCategory == null || 
                         (currentPath.Contains("/sales/edit/") || System.Text.RegularExpressions.Regex.IsMatch(currentPath, @"/sales/\d+")))
                     {
@@ -204,7 +198,6 @@
                 }
             }
             
-            // Handle admin section
             if (!currentPath.Contains("/admin"))
             {
                 showAdminSubMenu = false;
@@ -228,7 +221,6 @@
 
         var currentPath = NavigationManager.Uri.ToLower();
 
-        // For viewing, editing specific invoice, or create mode
         if (currentPath.Contains("/sales/edit/") || 
             System.Text.RegularExpressions.Regex.IsMatch(currentPath, @"/sales/\d+") || 
             currentPath.Contains("/sales/create"))
@@ -236,7 +228,6 @@
             return code.Equals(currentCategory, StringComparison.OrdinalIgnoreCase);
         }
 
-        // For category listing pages, use exact path matching
         var categoryRoute = GetCategoryRoute(code).ToLower();
         return currentPath.EndsWith(categoryRoute, StringComparison.OrdinalIgnoreCase);
     }
@@ -245,24 +236,20 @@
     {
         try
         {
-            // Clear any client-side storage first
             await JSRuntime.InvokeVoidAsync("localStorage.clear");
             await JSRuntime.InvokeVoidAsync("sessionStorage.clear");
 
-            // Navigate to logout endpoint
             await JSRuntime.InvokeVoidAsync("eval", "window.location.href = '/logout'");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Logout error: {ex.Message}");
-            // Fallback navigation
             await JSRuntime.InvokeVoidAsync("eval", "window.location.href = '/login'");
         }
     }
 
     private string GetCategoryRoute(string code)
     {
-        // Convert category code to route (keep this part as is)
         return code.ToLower() switch
         {
             "dom" => "sales/domestic",
@@ -285,10 +272,8 @@
         if (string.IsNullOrEmpty(stringKey))
             return "";
 
-        // Get default language ID, defaulting to 1 if null
         var languageId = defaultLanguageId;
         
-        // Call GetString with non-nullable int
         return LocalizationService.GetString(stringKey, languageId) ?? stringKey;
     }
 

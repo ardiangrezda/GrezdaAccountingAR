@@ -94,7 +94,6 @@
     {
         editContext = new EditContext(loginModel);
         
-        // Check for error messages from URL parameters
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
         var error = query["error"];
@@ -131,7 +130,6 @@
                 return;
             }
 
-            // Verify credentials first without signing in
             var user = await UserManager.FindByEmailAsync(loginModel.Email);
             if (user == null)
             {
@@ -146,7 +144,6 @@
                 return;
             }
 
-            // Get available business units before signing in
             var isAdmin = await UserManager.IsInRoleAsync(user, "Admin");
             availableBusinessUnits = await BusinessUnitService.GetUserBusinessUnitsAsync(user.Id, isAdmin);
             
@@ -158,13 +155,11 @@
 
             if (availableBusinessUnits.Count == 1)
             {
-                // Auto-select single business unit and sign in
                 await JSRuntime.InvokeVoidAsync("localStorage.setItem", "currentBusinessUnit", availableBusinessUnits[0].Id.ToString());
                 await PerformSignIn();
             }
             else
             {
-                // Show business unit selection for multiple units
                 showBusinessUnitSelect = true;
                 StateHasChanged();
                 return;
@@ -187,7 +182,6 @@
         {
             try
             {
-                // Store the business unit
                 await JSRuntime.InvokeVoidAsync("localStorage.setItem", "currentBusinessUnit", selectedBusinessUnitId);
                 await PerformSignIn();
             }
@@ -215,8 +209,6 @@
     {
         try
         {
-            // Use JavaScript to submit a form to the /Account/Login endpoint
-            // This avoids the "headers already started" issue
             await JSRuntime.InvokeVoidAsync("submitLoginForm", loginModel.Email, loginModel.Password, loginModel.RememberMe);
         }
         catch (Exception ex)
@@ -296,7 +288,6 @@
 
 <script>
     window.submitLoginForm = function(email, password, rememberMe) {
-        // Create a form dynamically and submit it
         var form = document.createElement('form');
         form.method = 'POST';
         form.action = '/Account/Login';

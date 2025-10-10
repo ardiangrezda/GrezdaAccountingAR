@@ -37,7 +37,6 @@ namespace Server.Services
             await _semaphore.WaitAsync();
             try
             {
-                // Double-check after acquiring the lock
                 if (_cachedDefaultLanguageId.HasValue)
                     return _cachedDefaultLanguageId.Value;
 

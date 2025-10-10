@@ -10,11 +10,9 @@ using Server.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Database - Remove duplicate DbContextFactory
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Identity and Authentication configuration
 builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 {
     // Password settings
@@ -36,7 +34,6 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 .AddRoles<IdentityRole>()
 .AddEntityFrameworkStores<ApplicationDbContext>();
 
-// Cookie configuration
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/login";
@@ -69,7 +66,6 @@ builder.Services.Configure<CircuitOptions>(options =>
     options.JSInteropDefaultCallTimeout = TimeSpan.FromMinutes(1);
 });
 
-// Your services
 builder.Services.AddScoped<ArticleService>();
 builder.Services.AddScoped<ILocalizationService, LocalizationService>();
 builder.Services.AddScoped<SubjectService>();
@@ -79,7 +75,6 @@ builder.Services.AddScoped<BusinessUnitService>();
 builder.Services.AddScoped<BusinessUnitStateContainer>();
 builder.Services.AddSingleton<StateContainer>();
 
-// CORS configuration
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
@@ -92,7 +87,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Configure pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
@@ -110,13 +104,11 @@ app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Authentication middleware
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value?.ToLower() ?? "";
     var isAuthenticated = context.User?.Identity?.IsAuthenticated == true;
     
-    // Allow access to login page and its resources
     if (path.StartsWith("/login") || 
         path.StartsWith("/account/login") ||
         path.StartsWith("/_framework") || 
@@ -129,7 +121,6 @@ app.Use(async (context, next) =>
         return;
     }
 
-    // Check if user is NOT authenticated
     if (!isAuthenticated)
     {
         context.Response.Redirect("/login");
@@ -139,7 +130,6 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// Logout endpoints
 app.MapPost("/logout", async (SignInManager<ApplicationUser> signInManager, HttpContext context) =>
 {
     await signInManager.SignOutAsync();
@@ -182,7 +172,6 @@ app.MapGet("/logout", async (SignInManager<ApplicationUser> signInManager, HttpC
     await context.Response.WriteAsync(html);
 });
 
-// Login endpoint - Only POST, remove GET
 app.MapPost("/Account/Login", async (
     HttpContext context,
     SignInManager<ApplicationUser> signInManager) =>

@@ -265,14 +265,11 @@ else
         {
             loading = true;
             
-            // Get current user ID
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             
-            // Load invoice data
             invoice = await SalesService.GetSaleByIdAsync(Id);
 
-            // Store category information if invoice loaded successfully
             if (invoice != null && invoice.SalesCategoryId > 0)
             {
                 try
@@ -282,13 +279,11 @@ else
                     if (category?.Code != null)
                     {
                         await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "currentSalesCategory", category.Code);
-                        // Force NavMenu to update
                         await JSRuntime.InvokeVoidAsync("dispatchEvent", new object[] { new { type = "storage" } });
                     }
                 }
                 catch (Exception ex)
                 {
-                    // Log but don't throw - this shouldn't prevent the page from loading
                     Console.WriteLine($"Error setting category: {ex.Message}");
                 }
             }
@@ -307,29 +302,24 @@ else
     {
         try
         {
-            // Get the current category code based on the invoice's category ID
             var categories = await StateContainer.GetSalesCategoriesAsync();
             var category = categories.FirstOrDefault(c => c.Id == invoice.SalesCategoryId);
             
             if (category?.Code != null)
             {
-                // Keep the category in session storage
                 await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "currentSalesCategory", category.Code);
                 
-                // Navigate to the specific category route
                 var categoryRoute = GetCategoryRoute(category.Code);
                 Navigation.NavigateTo($"/{categoryRoute}");
             }
             else
             {
-                // Fallback to general sales page if category not found
                 await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "currentSalesCategory");
                 Navigation.NavigateTo("/sales");
             }
         }
         catch (Exception ex)
         {
-            // If anything goes wrong, fall back to the general sales page
             await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "currentSalesCategory");
             Navigation.NavigateTo("/sales");
         }
@@ -337,7 +327,6 @@ else
 
     private string GetCategoryRoute(string code)
     {
-        // Convert category code to route
         return code.ToLower() switch
         {
             "dom" => "sales/domestic",
@@ -374,10 +363,8 @@ else
             
             if (confirmed)
             {
-                // Use the user ID for the operation
                 await SalesService.PostSaleAsync(Id, userId);
                 
-                // Reload the invoice to refresh the status
                 invoice = await SalesService.GetSaleByIdAsync(Id);
                 
                 await JSRuntime.InvokeVoidAsync("alert", "Invoice posted successfully.");
@@ -406,7 +393,6 @@ else
                 {
                     await SalesService.CancelSaleAsync(Id, reason, userId);
                     
-                    // Reload the invoice to refresh the status
                     invoice = await SalesService.GetSaleByIdAsync(Id);
                     
                     await JSRuntime.InvokeVoidAsync("alert", "Invoice cancelled successfully.");
@@ -423,7 +409,6 @@ else
     {
         try
         {
-            // This could be expanded to use a proper PDF generation service
             await JSRuntime.InvokeVoidAsync("window.print");
         }
         catch (Exception ex)

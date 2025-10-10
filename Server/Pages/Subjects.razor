@@ -166,7 +166,6 @@
     private string selectedType = string.Empty;
     private bool showInactive = false;
 
-    // Localized strings
     private string pageTitle = string.Empty;
     private string newSubjectText = "New Subject";
     private string searchButtonText = "Search";
@@ -186,7 +185,6 @@
     private string notFoundTitle = string.Empty;
     private string notFoundMessage = string.Empty;
 
-    // Add these localization string properties
     private string codeHeader = string.Empty;
     private string subjectNameHeader = string.Empty;
     private string nuiFiscalHeader = string.Empty;
@@ -197,22 +195,18 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Get current user
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
             currentUser = await UserManager.GetUserAsync(authState.User);
         }
 
-        // Get default language ID once
         var languageId = await LocalizationService.GetDefaultLanguageId();
 
-        // Load localized strings using synchronous GetString
         pageTitle = LocalizationService.GetString("STRING_00098", languageId) ?? "Subjects";
         newSubjectText = LocalizationService.GetString("STRING_00100", languageId) ?? "New Subject";
         searchButtonText = LocalizationService.GetString("STRING_00004", languageId) ?? "Search";
 
-        // Table headers
         codeHeader = LocalizationService.GetString("STRING_00033", languageId) ?? "Code";
         subjectNameHeader = LocalizationService.GetString("STRING_00034", languageId) ?? "Name";
         nuiFiscalHeader = LocalizationService.GetString("STRING_00080", languageId) ?? "NUI/Fiscal";
@@ -221,12 +215,10 @@
         statusHeader = LocalizationService.GetString("STRING_00038", languageId) ?? "Status";
         actionsHeader = LocalizationService.GetString("STRING_00039", languageId) ?? "Actions";
 
-        // Remove unused variables or add them if needed
         basicInfoHeader = LocalizationService.GetString("STRING_00077", languageId) ?? "Basic Information";
         contactInfoHeader = LocalizationService.GetString("STRING_00078", languageId) ?? "Contact Information";
         subjectTypesHeader = LocalizationService.GetString("STRING_00079", languageId) ?? "Subject Types";
         
-        // Other labels if needed
         nuiLabel = LocalizationService.GetString("STRING_00080", languageId) ?? "NUI";
         fiscalNrLabel = LocalizationService.GetString("STRING_00081", languageId) ?? "Fiscal Nr";
         contactPersonLabel = LocalizationService.GetString("STRING_00082", languageId) ?? "Contact Person";
@@ -235,16 +227,13 @@
         emailLabel = LocalizationService.GetString("STRING_00085", languageId) ?? "Email";
         websiteLabel = LocalizationService.GetString("STRING_00086", languageId) ?? "Website";
         
-        // Button texts
         backButtonText = LocalizationService.GetString("STRING_00087", languageId) ?? "Back";
         editButtonText = LocalizationService.GetString("STRING_00088", languageId) ?? "Edit";
         restoreButtonText = LocalizationService.GetString("STRING_00089", languageId) ?? "Restore";
 
-        // Messages
         notFoundTitle = LocalizationService.GetString("STRING_00090", languageId) ?? "Not Found";
         notFoundMessage = LocalizationService.GetString("STRING_00091", languageId) ?? "Subject not found";
 
-        // Load subjects data
         await LoadSubjects();
     }
 

@@ -51,7 +51,6 @@
             
             if (businessUnits.Count == 1)
             {
-                // Auto-select for single unit users
                 await SetBusinessUnit(businessUnits.First().Id);
             }
         }
@@ -68,7 +67,6 @@
     private async Task SetBusinessUnit(int businessUnitId)
     {
         StateContainer.CurrentBusinessUnitId = businessUnitId;
-        // Optionally store in session/local storage
         await JSRuntime.InvokeVoidAsync("localStorage.setItem", "currentBusinessUnit", businessUnitId);
     }
 }

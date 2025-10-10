@@ -28,7 +28,7 @@ namespace Server.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder); // This is CRITICAL - adds Identity tables
+            base.OnModelCreating(modelBuilder);
 
             // Your existing Unit configuration
             modelBuilder.Entity<Unit>(entity =>
@@ -118,7 +118,7 @@ namespace Server.Data
             modelBuilder.Entity<UserSetting>(entity =>
             {
                 entity.HasKey(e => e.UserId);
-                entity.Property(e => e.UserId).HasMaxLength(450); // Identity key length
+                entity.Property(e => e.UserId).HasMaxLength(450);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
                 entity.HasOne<ApplicationUser>()
@@ -133,7 +133,7 @@ namespace Server.Data
             });
 
             modelBuilder.Entity<UserBusinessUnit>()
-                .HasKey(ub => new { ub.UserId, ub.BusinessUnitId }); // Composite key
+                .HasKey(ub => new { ub.UserId, ub.BusinessUnitId });
 
             modelBuilder.Entity<UserBusinessUnit>()
                 .HasOne(ub => ub.User)
@@ -151,6 +151,34 @@ namespace Server.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Separator).IsRequired();
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+                
+                // Add unique constraint per business unit and sales category
+                entity.HasIndex(e => new { e.BusinessUnitId, e.SalesCategoryId })
+                      .IsUnique();
+
+                // Add relationships
+                entity.HasOne(e => e.BusinessUnit)
+                      .WithMany()
+                      .HasForeignKey(e => e.BusinessUnitId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.SalesCategory)
+                      .WithMany()
+                      .HasForeignKey(e => e.SalesCategoryId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // BusinessUnit configuration
+            modelBuilder.Entity<BusinessUnit>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.Code).IsUnique();
+                entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(255);
+                entity.Property(e => e.Address).HasMaxLength(255);
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             });
         }

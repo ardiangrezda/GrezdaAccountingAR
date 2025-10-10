@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Server.Data;
 
@@ -11,9 +12,11 @@ using Server.Data;
 namespace Server.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251009145025_AddInvoiceNumberFormatSeedData")]
+    partial class AddInvoiceNumberFormatSeedData
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -339,18 +342,14 @@ namespace Server.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("LastModifiedAt")
                         .HasColumnType("datetime2");
@@ -361,9 +360,6 @@ namespace Server.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
 
                     b.ToTable("BusinessUnits");
                 });
@@ -407,9 +403,6 @@ namespace Server.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("BusinessUnitId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
@@ -417,12 +410,6 @@ namespace Server.Migrations
 
                     b.Property<DateTime?>("LastModifiedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<int>("LastUsedSequentialNumber")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SalesCategoryId")
-                        .HasColumnType("int");
 
                     b.Property<string>("Separator")
                         .IsRequired()
@@ -445,12 +432,20 @@ namespace Server.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SalesCategoryId");
-
-                    b.HasIndex("BusinessUnitId", "SalesCategoryId")
-                        .IsUnique();
-
                     b.ToTable("InvoiceNumberFormats");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Separator = "-",
+                            SequentialNumberLength = 4,
+                            UseBusinessUnitCode = true,
+                            UseSalesCategoryCode = true,
+                            UseSequentialNumber = true,
+                            UseYear = true
+                        });
                 });
 
             modelBuilder.Entity("Server.Models.Language", b =>
@@ -1023,25 +1018,6 @@ namespace Server.Migrations
                     b.Navigation("Unit");
 
                     b.Navigation("VATTable");
-                });
-
-            modelBuilder.Entity("Server.Models.InvoiceNumberFormat", b =>
-                {
-                    b.HasOne("Server.Models.BusinessUnit", "BusinessUnit")
-                        .WithMany()
-                        .HasForeignKey("BusinessUnitId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Server.Models.SalesCategory", "SalesCategory")
-                        .WithMany()
-                        .HasForeignKey("SalesCategoryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("BusinessUnit");
-
-                    b.Navigation("SalesCategory");
                 });
 
             modelBuilder.Entity("Server.Models.LocalizationString", b =>

@@ -22,18 +22,15 @@ namespace Server.Models
 
         public string? Description3 { get; set; }
 
-        // Foreign key to Unit
         [Required]
         public int UnitId { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }
 
-        // Foreign key to Currency
         [Required]
         public int CurrencyId { get; set; }
 
-        // Foreign key to VAT Table
         [Required]
         public int VATId { get; set; }
 
@@ -48,7 +45,6 @@ namespace Server.Models
 
         public DateTime? UpdatedAt { get; set; }
 
-        // Navigation properties
         [ForeignKey("UnitId")]
         public virtual Unit Unit { get; set; } = null!;
 
@@ -58,7 +54,6 @@ namespace Server.Models
         [ForeignKey("VATId")]
         public virtual VATTable VATTable { get; set; } = null!;
 
-        // Calculated properties
         [NotMapped]
         public decimal VATAmount => Price * ((VATTable?.VATRate ?? 0) / 100);
     }

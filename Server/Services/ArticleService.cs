@@ -159,7 +159,6 @@ namespace Server.Services
             var article = await _context.Articles.FindAsync(id);
             if (article == null) return false;
 
-            // Soft delete - just mark as inactive
             article.IsActive = false;
             article.UpdatedAt = DateTime.UtcNow;
 
