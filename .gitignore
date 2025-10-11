@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Sensitive data files
+lnsert statements.txt
+Insert statements.txt
+*insert*.txt
+*Insert*.txt

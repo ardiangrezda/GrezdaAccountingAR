@@ -71,7 +71,7 @@
                                         <th>@vatHeader</th>
                                         <th>@stockHeader</th>
                                         <th>@statusHeader</th>
-                                        <th>@actionsHeader</th>
+                                        <th style="min-width: 120px;">@actionsHeader</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -116,14 +116,16 @@
                                                 }
                                             </td>
                                             <td>
-                                                <button class="btn btn-sm btn-primary me-1"
-                                                        @onclick="() => ViewArticle(article.Id)">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-secondary me-1"
-                                                        @onclick="() => EditArticle(article.Id)">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
+                                                <div class="d-flex align-items-center">
+                                                    <button class="btn btn-sm btn-primary me-1"
+                                                            @onclick="() => ViewArticle(article.Id)">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-secondary"
+                                                            @onclick="() => EditArticle(article.Id)">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     }
@@ -177,7 +179,7 @@
 
         var languageId = await LocalizationService.GetDefaultLanguageId();
 
-        pageTitle = LocalizationService.GetString("STRING_00001", languageId) ?? "Article Management";
+        pageTitle = LocalizationService.GetString("STRING_00001", languageId) ?? "Articles";  // Changed from "Article Management" to "Articles"
         newArticleText = LocalizationService.GetString("STRING_00002", languageId) ?? "New Article";
         searchPlaceholder = LocalizationService.GetString("STRING_00003", languageId) ?? "Search articles...";
         searchButtonText = LocalizationService.GetString("STRING_00004", languageId) ?? "Search";
@@ -185,11 +187,11 @@
         codeHeader = LocalizationService.GetString("STRING_00033", languageId) ?? "Code";
         barcodeHeader = LocalizationService.GetString("STRING_00010", languageId) ?? "Barcode";
         descriptionHeader = LocalizationService.GetString("STRING_00042", languageId) ?? "Description";
-        categoryHeader = LocalizationService.GetString("STRING_00011", languageId) ?? "Category";
-        unitHeader = LocalizationService.GetString("STRING_00012", languageId) ?? "Unit";
-        priceHeader = LocalizationService.GetString("STRING_00013", languageId) ?? "Price";
-        vatHeader = LocalizationService.GetString("STRING_00014", languageId) ?? "VAT";
-        stockHeader = LocalizationService.GetString("STRING_00015", languageId) ?? "Stock";
+        categoryHeader = LocalizationService.GetString("STRING_00012", languageId) ?? "Category";
+        unitHeader = LocalizationService.GetString("STRING_00013", languageId) ?? "Unit";
+        priceHeader = LocalizationService.GetString("STRING_00014", languageId) ?? "Price";
+        vatHeader = LocalizationService.GetString("STRING_00015", languageId) ?? "VAT";
+        stockHeader = LocalizationService.GetString("STRING_00016", languageId) ?? "Stock Quantity";
         statusHeader = LocalizationService.GetString("STRING_00038", languageId) ?? "Status";
         actionsHeader = LocalizationService.GetString("STRING_00039", languageId) ?? "Actions";
 
