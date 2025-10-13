@@ -169,7 +169,7 @@
                             <div>
                                 <h2 class="mb-0">@pageTitle</h2>
                                 <small class="text-muted">
-                                    @(IsEdit ? $"Invoice #{sale.InvoiceNumber}" : "New Invoice")
+                                    @(IsEdit? @invoiceNumberLabel + $": {sale.InvoiceNumber}" : @newInvoiceLabel)
                                     @if (currentCategoryName != null)
                                     {
                                         <span class="ms-2 badge bg-info">@currentCategoryName</span>
@@ -182,7 +182,7 @@
                             </div>
                             <div class="invoice-actions">
                                 <button type="button" class="btn btn-outline-secondary me-2" @onclick="GoBack">
-                                    <i class="fas fa-arrow-left"></i> Back
+                                    <i class="fas fa-arrow-left"></i> @backLabel
                                 </button>
                                 <button type="submit" class="btn btn-primary" disabled="@isSaving">
                                     @if (isSaving)
@@ -193,7 +193,7 @@
                                     {
                                         <i class="fas fa-save"></i>
                                     }
-                                    Save Invoice
+                                    @saveInvoiceLabel
                                 </button>
                             </div>
                         </div>
@@ -209,14 +209,14 @@
                                         <div class="row">
                                             <div class="col-6">
                                                 <div class="mb-2">
-                                                    <label class="form-label fw-bold small">Invoice Date</label>
+                                                    <label class="form-label fw-bold small">@invoiceDateLabel</label>
                                                     <InputDate @bind-Value="sale.InvoiceDate" class="form-control form-control-sm" />
                                                     <ValidationMessage For="@(() => sale.InvoiceDate)" class="text-danger small" />
                                                 </div>
                                             </div>
                                             <div class="col-6">
                                                 <div class="mb-2">
-                                                    <label class="form-label fw-bold small">Expiry Date</label>
+                                                    <label class="form-label fw-bold small">@expiryDateLabel</label>
                                                     <InputDate @bind-Value="sale.InvoiceExpiryDate" class="form-control form-control-sm" />
                                                 </div>
                                             </div>
@@ -226,12 +226,12 @@
                                     <!-- Buyer Information - Compact -->
                                     <div class="col-md-5">
                                         <div class="mb-2">
-                                            <label class="form-label fw-bold small">Buyer Name</label>
+                                            <label class="form-label fw-bold small">@buyerNameLabel</label>
                                             <div class="position-relative">
                                                 <input value="@sale.BuyerName"
                                                        @oninput="HandleBuyerSearch"
                                                        class="@($"form-control form-control-sm {(sale.BuyerId <= 0 ? "invalid-field" : "")}")"
-                                                       placeholder="Start typing buyer name..." />
+                                                       placeholder="@startTypingBuyerNameLabel" />
                                                 @if (showBuyerSearch && buyerSearchResults.Any())
                                                 {
                                                     <div class="search-dropdown">
@@ -255,9 +255,9 @@
                                 <!-- Invoice Items -->
                                 <div class="row">
                                     <div class="col-12">
-                                        <h5 class="mb-3">Invoice Items</h5>
+                                        <h5 class="mb-3">@invoiceItemsLabel</h5>
                                         <button type="button" class="btn btn-success btn-sm mb-3" @onclick="AddNewItem">
-                                            <i class="fas fa-plus"></i> Add Item
+                                            <i class="fas fa-plus"></i> @addItemLabel
                                         </button>
                                         
                                         <div class="table-responsive">
@@ -265,16 +265,16 @@
                                                 <thead>
                                                     <tr>
                                                         <th style="width: 40px">#</th>
-                                                        <th style="width: 150px">Article</th>
-                                                        <th style="width: 200px">Description</th>
-                                                        <th style="width: 80px" class="text-end">QTY</th>
-                                                        <th style="width: 80px" class="text-center">Unit</th>
-                                                        <th style="width: 120px" class="text-end">Price Excl.</th>
-                                                        <th style="width: 120px" class="text-end">Price Incl.</th>
-                                                        <th style="width: 100px" class="text-end">Disc. %</th>
-                                                        <th style="width: 120px" class="text-end">Disc. Amount</th>
-                                                        <th style="width: 120px" class="text-end">Value Excl.</th>
-                                                        <th style="width: 120px" class="text-end">Value Incl.</th>
+                                                        <th style="width: 150px">@articleLabel</th>
+                                                        <th style="width: 200px">@descriptionLabel</th>
+                                                        <th style="width: 80px" class="text-end">@quantityLabel</th>
+                                                        <th style="width: 80px" class="text-center">@unitLabel</th>
+                                                        <th style="width: 120px" class="text-end">@priceExclLabel</th>
+                                                        <th style="width: 120px" class="text-end">@priceInclLabel</th>
+                                                        <th style="width: 100px" class="text-end">@discPercentLabel</th>
+                                                        <th style="width: 120px" class="text-end">@discAmountLabel</th>
+                                                        <th style="width: 120px" class="text-end">@valueExclLabel</th>
+                                                        <th style="width: 120px" class="text-end">@valueInclLabel</th>
                                                         <th style="width: 40px"></th>
                                                     </tr>
                                                 </thead>
@@ -299,7 +299,7 @@
                                                                                value="@item.Description"
                                                                                @oninput="(e) => HandleDescriptionSearch(e, item)"
                                                                                @onfocus="() => SetActiveSearchItem(item)"
-                                                                               placeholder="Start typing description..." />
+                                                                               placeholder=@startTypingDescriptionLabel />
                                                                         @if (activeSearchItem == item && showArticleSearch && articleSearchResults.Any())
                                                                         {
                                                                             <div class="search-dropdown">
@@ -359,7 +359,7 @@
                                                     {
                                                         <tr>
                                                             <td colspan="12" class="text-center text-muted">
-                                                                No items added yet.
+                                                                @noItemsAddedYetLabel
                                                             </td>
                                                         </tr>
                                                     }
@@ -367,7 +367,7 @@
                                                 <tfoot>
                                                     <tr class="totals-row">
                                                         <td colspan="7"></td>
-                                                        <td class="text-end">Totals:</td>
+                                                        <td class="text-end">@totalsLabel</td>
                                                         <td class="text-end">@sale.TotalDiscountAmount.ToString("N2")</td>
                                                         <td class="text-end">@sale.TotalWithoutVAT.ToString("N2")</td>
                                                         <td class="text-end">@sale.TotalWithVAT.ToString("N2")</td>
@@ -387,24 +387,24 @@
                                     <div class="col-md-6 offset-md-6">
                                         <div class="card">
                                             <div class="invoice-summary">
-                                                <h5 class="mb-0">INVOICE SUMMARY</h5>
+                                                <h5 class="mb-0">@invoiceSummaryLabel</h5>
                                             </div>
                                             <div class="card-body">
                                                 <div class="d-flex justify-content-between mb-2">
-                                                    <span>Subtotal (before discount):</span>
+                                                    <span>@subtotalBeforeDiscountLabel</span>
                                                     <span class="fw-bold">@((sale.TotalWithoutVAT + sale.TotalDiscountAmount).ToString("N2"))</span>
                                                 </div>
                                                 <div class="d-flex justify-content-between mb-2">
-                                                    <span>Total Discounts:</span>
+                                                    <span>@totalDiscountsLabel</span>
                                                     <span class="fw-bold text-danger">-@sale.TotalDiscountAmount.ToString("N2")</span>
                                                 </div>
                                                 <div class="d-flex justify-content-between mb-3">
-                                                    <span>Total VAT:</span>
+                                                    <span>@totalVatLabel</span>
                                                     <span class="fw-bold">@sale.TotalVATAmount.ToString("N2")</span>
                                                 </div>
                                                 <div class="total-due">
                                                     <div class="d-flex justify-content-between">
-                                                        <span class="h5 mb-0">TOTAL DUE:</span>
+                                                        <span class="h5 mb-0">@totalDueLabel</span>
                                                         <span class="h5 mb-0">@sale.TotalWithVAT.ToString("N2")</span>
                                                     </div>
                                                 </div>
@@ -431,7 +431,7 @@
             <div class="alert alert-warning m-5">
                 <h4>Unable to load invoice</h4>
                 <p>The invoice you're trying to edit couldn't be loaded.</p>
-                <button class="btn btn-primary" @onclick="GoBack">Back to Sales</button>
+                <button class="btn btn-primary" @onclick="GoBack">@backToSalesLabel</button>
             </div>
         }
     </ChildContent>
@@ -440,7 +440,7 @@
             <h4>An error occurred while processing your request</h4>
             <p>Please try again or contact support if the problem persists.</p>
             <button class="btn btn-secondary" @onclick="ResetError">Try Again</button>
-            <button class="btn btn-primary ms-2" @onclick="GoBack">Back to Sales</button>
+            <button class="btn btn-primary ms-2" @onclick="GoBack">@backToSalesLabel</button>
         </div>
     </ErrorContent>
 </ErrorBoundary>
@@ -462,17 +462,75 @@
 
     private List<Subject> buyerSearchResults = new();
     private bool showBuyerSearch = false;
-    
+
     private List<Article> articleSearchResults = new();
     private bool showArticleSearch = false;
     private SalesInvoiceItem? activeSearchItem = null;
-    
+
     private EditContext? editContext;
     private string? currentCategoryName;
     private string? currentBusinessUnitName;
 
+    // Localization strings
+    private string createInvoiceLabel = string.Empty;
+    private string editInvoiceLabel = string.Empty;
+    private string userNotAuthenticatedLabel = string.Empty;
+    private string invoiceNotFoundLabel = string.Empty;
+    private string errorLoadingInvoiceLabel = string.Empty;
+    private string noBusinessUnitSelectedLabel = string.Empty;
+    private string invoiceCreatedSuccessfullyLabel = string.Empty;
+    private string invoiceUpdatedSuccessfullyLabel = string.Empty;
+    private string errorCalculatingTotalsLabel = string.Empty;
+    private string errorAddingNewItemLabel = string.Empty;
+    private string errorLoadingArticleLabel = string.Empty;
+    private string errorSearchingArticlesLabel = string.Empty;
+    private string pleaseSelectBuyerLabel = string.Empty;
+    private string businessUnitRequiredLabel = string.Empty;
+    private string pleaseAddOneItemLabel = string.Empty;
+    private string allItemsValidArticleLabel = string.Empty;
+    private string allItemsQuantityGreaterZeroLabel = string.Empty;
+    private string errorLoadingCategoryNameLabel = string.Empty;
+    private string errorSelectingArticleLabel = string.Empty;
+
+    // SalesInvoice UI localization strings
+    private string invoiceItemsLabel = string.Empty;
+    private string saveInvoiceLabel = string.Empty;
+    private string newInvoiceLabel = string.Empty;
+    private string invoiceDateLabel = string.Empty;
+    private string expiryDateLabel = string.Empty;
+    private string buyerNameLabel = string.Empty;
+    private string addItemLabel = string.Empty;
+    private string articleLabel = string.Empty;
+    private string quantityLabel = string.Empty;
+    private string priceExclLabel = string.Empty;
+    private string priceInclLabel = string.Empty;
+    private string discPercentLabel = string.Empty;
+    private string discAmountLabel = string.Empty;
+    private string valueExclLabel = string.Empty;
+    private string valueInclLabel = string.Empty;
+    private string totalsLabel = string.Empty;
+    private string invoiceSummaryLabel = string.Empty;
+    private string subtotalBeforeDiscountLabel = string.Empty;
+    private string totalDiscountsLabel = string.Empty;
+    private string totalVatLabel = string.Empty;
+    private string totalDueLabel = string.Empty;
+    private string startTypingBuyerNameLabel = string.Empty;
+    private string noItemsAddedYetLabel = string.Empty;
+    private string invoiceNumberLabel = string.Empty;
+    private string dateLabel = string.Empty;
+    private string totalLabel = string.Empty;
+    private string descriptionLabel = string.Empty;
+    private string unitLabel = string.Empty;
+    private string backToSalesLabel = string.Empty;
+    private string startTypingDescriptionLabel = string.Empty;
+    private string backLabel = string.Empty;
+
     protected override async Task OnInitializedAsync()
     {
+        // Load localization strings first - this is component initialization
+        await LoadLocalizationStrings();
+        
+        // Then load invoice data
         await LoadInvoice();
     }
 
@@ -481,7 +539,9 @@
         try
         {
             loading = true;
-            pageTitle = IsEdit ? "Edit Invoice" : "Create Invoice";
+            
+            // Now pageTitle can use the already-loaded localization strings
+            pageTitle = IsEdit ? editInvoiceLabel : createInvoiceLabel;
 
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -505,7 +565,7 @@
             }
             else
             {
-                await JSRuntime.InvokeVoidAsync("alert", "No business unit selected. Please log in again.");
+                await JSRuntime.InvokeVoidAsync("alert", noBusinessUnitSelectedLabel);
                 Navigation.NavigateTo("/login");
                 return;
             }
@@ -524,7 +584,7 @@
                 {
                     InvoiceDate = DateTime.Now,
                     Items = new List<SalesInvoiceItem>(),
-                    CreatedByUserId = userId ?? throw new InvalidOperationException("User is not authenticated"),
+                    CreatedByUserId = userId ?? throw new InvalidOperationException(userNotAuthenticatedLabel),
                     CreatedAt = DateTime.UtcNow,
                     SalesCategoryId = categoryId,
                     BusinessUnitId = businessUnitId
@@ -597,7 +657,7 @@
                     }
                     else
                     {
-                        await JSRuntime.InvokeVoidAsync("alert", "Invoice not found");
+                        await JSRuntime.InvokeVoidAsync("alert", invoiceNotFoundLabel);
                         Navigation.NavigateTo("/sales");
                         return;
                     }
@@ -605,7 +665,7 @@
                 catch (Exception ex)
                 {
                     await JSRuntime.InvokeVoidAsync("console.error", "Error loading invoice", ex.Message);
-                    await JSRuntime.InvokeVoidAsync("alert", $"Error loading invoice: {ex.Message}");
+                    await JSRuntime.InvokeVoidAsync("alert", $"{errorLoadingInvoiceLabel}: {ex.Message}");
                     Navigation.NavigateTo("/sales");
                     return;
                 }
@@ -651,7 +711,7 @@
                 }
                 else
                 {
-                    await JSRuntime.InvokeVoidAsync("alert", "No business unit selected. Please log in again.");
+                    await JSRuntime.InvokeVoidAsync("alert", noBusinessUnitSelectedLabel);
                     Navigation.NavigateTo("/login");
                     return;
                 }
@@ -671,19 +731,19 @@
                 if (!IsEdit)
                 {
                     await SalesService.CreateSaleAsync(sale);
-                    await JSRuntime.InvokeVoidAsync("alert", "Invoice created successfully!");
+                    await JSRuntime.InvokeVoidAsync("alert", invoiceCreatedSuccessfullyLabel);
                 }
                 else
                 {
                     await SalesService.UpdateSaleAsync(sale, userId);
-                    await JSRuntime.InvokeVoidAsync("alert", "Invoice updated successfully!");
+                    await JSRuntime.InvokeVoidAsync("alert", invoiceUpdatedSuccessfullyLabel);
                 }
 
                 Navigation.NavigateTo($"/{categoryRoute}");
             }
             catch (Exception ex)
             {
-                await JSRuntime.InvokeVoidAsync("alert", $"Error saving invoice: {ex.Message}");
+                await JSRuntime.InvokeVoidAsync("alert", $"{errorLoadingInvoiceLabel}: {ex.Message}");
             }
             finally
             {
@@ -794,7 +854,7 @@
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("console.error", "Error calculating totals", ex.Message);
+            await JSRuntime.InvokeVoidAsync("console.error", errorCalculatingTotalsLabel, ex.Message);
         }
     }
 
@@ -836,7 +896,7 @@
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("console.error", "Error adding new item", ex.Message);
+            await JSRuntime.InvokeVoidAsync("console.error", errorAddingNewItemLabel, ex.Message);
         }
     }
 
@@ -883,7 +943,7 @@
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("console.error", "Error loading article", ex.Message);
+            await JSRuntime.InvokeVoidAsync("console.error", errorLoadingArticleLabel, ex.Message);
         }
     }
 
@@ -937,7 +997,7 @@
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("console.error", "Error searching articles", ex.Message);
+            await JSRuntime.InvokeVoidAsync("console.error", errorSearchingArticlesLabel, ex.Message);
         }
     }
 
@@ -945,19 +1005,19 @@
     {
         if (sale.BuyerId <= 0)
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Please select a buyer.");
+            await JSRuntime.InvokeVoidAsync("alert", pleaseSelectBuyerLabel);
             return false;
         }
 
         if (sale.BusinessUnitId <= 0)
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Business unit is required. Please log out and log in again.");
+            await JSRuntime.InvokeVoidAsync("alert", businessUnitRequiredLabel);
             return false;
         }
 
         if (sale.Items == null || !sale.Items.Any())
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Please add at least one item.");
+            await JSRuntime.InvokeVoidAsync("alert", pleaseAddOneItemLabel);
             return false;
         }
 
@@ -965,13 +1025,13 @@
         {
             if (item.ArticleId <= 0)
             {
-                await JSRuntime.InvokeVoidAsync("alert", "All items must have a valid article.");
+                await JSRuntime.InvokeVoidAsync("alert", allItemsValidArticleLabel);
                 return false;
             }
 
             if (item.Quantity <= 0)
             {
-                await JSRuntime.InvokeVoidAsync("alert", "All items must have a quantity greater than zero.");
+                await JSRuntime.InvokeVoidAsync("alert", allItemsQuantityGreaterZeroLabel);
                 return false;
             }
         }
@@ -1035,7 +1095,7 @@
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("console.error", "Error loading category name", ex.Message);
+            await JSRuntime.InvokeVoidAsync("console.error", errorLoadingCategoryNameLabel, ex.Message);
         }
     }
 
@@ -1073,7 +1133,63 @@
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("console.error", "Error selecting article", ex.Message);
+            await JSRuntime.InvokeVoidAsync("console.error", errorSelectingArticleLabel, ex.Message);
         }
+    }
+
+    private async Task LoadLocalizationStrings()
+    {
+        var languageId = await LocalizationService.GetDefaultLanguageId();
+
+        createInvoiceLabel = LocalizationService.GetString("STRING_00097", languageId) ?? "Create Invoice";
+        editInvoiceLabel = LocalizationService.GetString("STRING_00098", languageId) ?? "Edit Invoice";
+        userNotAuthenticatedLabel = LocalizationService.GetString("STRING_00099", languageId) ?? "User is not authenticated";
+        invoiceNotFoundLabel = LocalizationService.GetString("STRING_00100", languageId) ?? "Invoice not found";
+        errorLoadingInvoiceLabel = LocalizationService.GetString("STRING_00101", languageId) ?? "Error loading invoice";
+        noBusinessUnitSelectedLabel = LocalizationService.GetString("STRING_00102", languageId) ?? "No business unit selected. Please log in again.";
+        invoiceCreatedSuccessfullyLabel = LocalizationService.GetString("STRING_00103", languageId) ?? "Invoice created successfully!";
+        invoiceUpdatedSuccessfullyLabel = LocalizationService.GetString("STRING_00104", languageId) ?? "Invoice updated successfully!";
+        errorCalculatingTotalsLabel = LocalizationService.GetString("STRING_00105", languageId) ?? "Error calculating totals";
+        errorAddingNewItemLabel = LocalizationService.GetString("STRING_00106", languageId) ?? "Error adding new item";
+        errorLoadingArticleLabel = LocalizationService.GetString("STRING_00107", languageId) ?? "Error loading article";
+        errorSearchingArticlesLabel = LocalizationService.GetString("STRING_00108", languageId) ?? "Error searching articles";
+        pleaseSelectBuyerLabel = LocalizationService.GetString("STRING_00109", languageId) ?? "Please select a buyer.";
+        businessUnitRequiredLabel = LocalizationService.GetString("STRING_00110", languageId) ?? "Business unit is required. Please log out and log in again.";
+        pleaseAddOneItemLabel = LocalizationService.GetString("STRING_00111", languageId) ?? "Please add at least one item.";
+        allItemsValidArticleLabel = LocalizationService.GetString("STRING_00112", languageId) ?? "All items must have a valid article.";
+        allItemsQuantityGreaterZeroLabel = LocalizationService.GetString("STRING_00113", languageId) ?? "All items must have a quantity greater than zero.";
+        errorLoadingCategoryNameLabel = LocalizationService.GetString("STRING_00114", languageId) ?? "Error loading category name";
+        errorSelectingArticleLabel = LocalizationService.GetString("STRING_00115", languageId) ?? "Error selecting article";
+        invoiceItemsLabel = LocalizationService.GetString("STRING_00116", languageId) ?? "Invoice Items";
+        saveInvoiceLabel = LocalizationService.GetString("STRING_00117", languageId) ?? "Save Invoice";
+        newInvoiceLabel = LocalizationService.GetString("STRING_00118", languageId) ?? "New Invoice";
+        invoiceDateLabel = LocalizationService.GetString("STRING_00119", languageId) ?? "Invoice Date";
+        expiryDateLabel = LocalizationService.GetString("STRING_00120", languageId) ?? "Expiry Date";
+        buyerNameLabel = LocalizationService.GetString("STRING_00121", languageId) ?? "Buyer Name";
+        addItemLabel = LocalizationService.GetString("STRING_00122", languageId) ?? "Add Item";
+        articleLabel = LocalizationService.GetString("STRING_00123", languageId) ?? "Article";
+        quantityLabel = LocalizationService.GetString("STRING_00124", languageId) ?? "QTY";
+        priceExclLabel = LocalizationService.GetString("STRING_00125", languageId) ?? "Price Excl.";
+        priceInclLabel = LocalizationService.GetString("STRING_00126", languageId) ?? "Price Incl.";
+        discPercentLabel = LocalizationService.GetString("STRING_00127", languageId) ?? "Disc. %";
+        discAmountLabel = LocalizationService.GetString("STRING_00128", languageId) ?? "Disc. Amount";
+        valueExclLabel = LocalizationService.GetString("STRING_00129", languageId) ?? "Value Excl.";
+        valueInclLabel = LocalizationService.GetString("STRING_00130", languageId) ?? "Value Incl.";
+        totalsLabel = LocalizationService.GetString("STRING_00131", languageId) ?? "Totals";
+        invoiceSummaryLabel = LocalizationService.GetString("STRING_00132", languageId) ?? "INVOICE SUMMARY";
+        subtotalBeforeDiscountLabel = LocalizationService.GetString("STRING_00133", languageId) ?? "Subtotal (before discount):";
+        totalDiscountsLabel = LocalizationService.GetString("STRING_00134", languageId) ?? "Total Discounts:";
+        totalVatLabel = LocalizationService.GetString("STRING_00135", languageId) ?? "Total VAT:";
+        totalDueLabel = LocalizationService.GetString("STRING_00136", languageId) ?? "TOTAL DUE:";
+        startTypingBuyerNameLabel = LocalizationService.GetString("STRING_00137", languageId) ?? "Start typing buyer name...";
+        noItemsAddedYetLabel = LocalizationService.GetString("STRING_00138", languageId) ?? "No items added yet.";
+        invoiceNumberLabel = LocalizationService.GetString("STRING_00139", languageId) ?? "Invoice #";
+        dateLabel = LocalizationService.GetString("STRING_00140", languageId) ?? "Date";
+        totalLabel = LocalizationService.GetString("STRING_00141", languageId) ?? "Total";
+        descriptionLabel = LocalizationService.GetString("STRING_00028", languageId) ?? "Description";
+        unitLabel = LocalizationService.GetString("STRING_00013", languageId) ?? "Unit";
+        backToSalesLabel = LocalizationService.GetString("STRING_00151", languageId) ?? "Back to Sales";
+        startTypingDescriptionLabel = LocalizationService.GetString("STRING_00143", languageId) ?? "Start typing description...";
+        backLabel = LocalizationService.GetString("STRING_00142", languageId) ?? "Back";
     }
 }
