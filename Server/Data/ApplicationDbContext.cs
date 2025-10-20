@@ -69,7 +69,7 @@ namespace Server.Data
                 entity.Property(e => e.Price).HasColumnType("decimal(18,2)").HasDefaultValue(0);
                 entity.Property(e => e.StockQuantity).HasDefaultValue(0);
                 entity.Property(e => e.IsActive).HasDefaultValue(true);
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.Property(e => e.Category).HasMaxLength(100);
 
                 // Relationships
@@ -106,7 +106,7 @@ namespace Server.Data
                 entity.HasIndex(e => new { e.StringKey, e.LanguageId }).IsUnique();
                 entity.Property(e => e.StringKey).IsRequired().HasMaxLength(50);
                 entity.Property(e => e.Text).IsRequired();
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                 entity.HasOne(e => e.Language)
                     .WithMany(l => l.LocalizationStrings)
@@ -119,7 +119,7 @@ namespace Server.Data
             {
                 entity.HasKey(e => e.UserId);
                 entity.Property(e => e.UserId).HasMaxLength(450);
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                 entity.HasOne<ApplicationUser>()
                     .WithMany()
@@ -151,7 +151,7 @@ namespace Server.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Separator).IsRequired();
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
                 
                 // Add unique constraint per business unit and sales category
                 entity.HasIndex(e => new { e.BusinessUnitId, e.SalesCategoryId })
@@ -179,7 +179,7 @@ namespace Server.Data
                 entity.Property(e => e.Description).HasMaxLength(255);
                 entity.Property(e => e.Address).HasMaxLength(255);
                 entity.Property(e => e.IsActive).HasDefaultValue(true);
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             });
         }
     }

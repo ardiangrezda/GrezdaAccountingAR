@@ -2,52 +2,43 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Server.Data;
 
 #nullable disable
 
-namespace Server.Migrations
+namespace Server.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251009145025_AddInvoiceNumberFormatSeedData")]
-    partial class AddInvoiceNumberFormatSeedData
+    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.19")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
-
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.19");
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedName")
                         .IsUnique()
-                        .HasDatabaseName("RoleNameIndex")
-                        .HasFilter("[NormalizedName] IS NOT NULL");
+                        .HasDatabaseName("RoleNameIndex");
 
                     b.ToTable("AspNetRoles", (string)null);
                 });
@@ -56,19 +47,17 @@ namespace Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("RoleId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -81,19 +70,17 @@ namespace Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -105,19 +92,17 @@ namespace Server.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
                     b.Property<string>("LoginProvider")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ProviderKey")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("LoginProvider", "ProviderKey");
 
@@ -129,10 +114,10 @@ namespace Server.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
                     b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("RoleId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("UserId", "RoleId");
 
@@ -144,18 +129,16 @@ namespace Server.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
                     b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("LoginProvider")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Value")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
@@ -165,73 +148,73 @@ namespace Server.Migrations
             modelBuilder.Entity("Server.Models.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("AccessFailedCount")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("LastLoginAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PasswordHash")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("SecurityStamp")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -240,8 +223,7 @@ namespace Server.Migrations
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
-                        .HasDatabaseName("UserNameIndex")
-                        .HasFilter("[NormalizedUserName] IS NOT NULL");
+                        .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -250,45 +232,43 @@ namespace Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Barcode")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Category")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<int>("CurrencyId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Description2")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Description3")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
 
                     b.Property<decimal>("Price")
@@ -298,17 +278,17 @@ namespace Server.Migrations
 
                     b.Property<int>("StockQuantity")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasDefaultValue(0);
 
                     b.Property<int>("UnitId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("VATId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -328,38 +308,43 @@ namespace Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Address")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("Description")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
 
                     b.Property<DateTime?>("LastModifiedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
 
                     b.ToTable("BusinessUnits");
                 });
@@ -368,24 +353,22 @@ namespace Server.Migrations
                 {
                     b.Property<int>("CurrencyId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CurrencyId"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Symbol")
                         .IsRequired()
                         .HasMaxLength(5)
-                        .HasColumnType("nvarchar(5)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("CurrencyId");
 
@@ -399,87 +382,84 @@ namespace Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<int>("BusinessUnitId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<DateTime?>("LastModifiedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LastUsedSequentialNumber")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SalesCategoryId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Separator")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("SequentialNumberLength")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseBusinessUnitCode")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseSalesCategoryCode")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseSequentialNumber")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseYear")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
-                    b.ToTable("InvoiceNumberFormats");
+                    b.HasIndex("SalesCategoryId");
 
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Separator = "-",
-                            SequentialNumberLength = 4,
-                            UseBusinessUnitCode = true,
-                            UseSalesCategoryCode = true,
-                            UseSequentialNumber = true,
-                            UseYear = true
-                        });
+                    b.HasIndex("BusinessUnitId", "SalesCategoryId")
+                        .IsUnique();
+
+                    b.ToTable("InvoiceNumberFormats");
                 });
 
             modelBuilder.Entity("Server.Models.Language", b =>
                 {
                     b.Property<int>("LanguageId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LanguageId"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
 
                     b.Property<bool>("IsDefault")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("INTEGER")
                         .HasDefaultValue(false);
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("NativeName")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("LanguageId");
 
@@ -493,33 +473,31 @@ namespace Server.Migrations
                 {
                     b.Property<int>("StringId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("StringId"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Category")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<int>("LanguageId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("StringKey")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Text")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("StringId");
 
@@ -535,22 +513,20 @@ namespace Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Code")
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("DescriptionStringId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int?>("NameStringId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -565,70 +541,68 @@ namespace Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("BusinessUnitId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("BuyerCode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("BuyerId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("BuyerName")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("CancellationReason")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("CreatedByUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("InvoiceDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("InvoiceExpiryDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("InvoiceNumber")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsCancelled")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsPosted")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("LastModifiedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("LastModifiedByUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("PostedDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("SalesCategoryId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("SequentialNumber")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<decimal>("TotalDiscountAmount")
                         .HasColumnType("decimal(18,2)");
@@ -661,34 +635,32 @@ namespace Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ArticleCode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("ArticleId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Barcode")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("CurrencyCode")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("CurrencyId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("TEXT");
 
                     b.Property<decimal>("DiscountAmount")
                         .HasColumnType("decimal(18,2)");
@@ -709,15 +681,15 @@ namespace Server.Migrations
                         .HasColumnType("decimal(18,4)");
 
                     b.Property<int>("SalesInvoiceId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("UnitCode")
                         .IsRequired()
                         .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("UnitId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<decimal>("VATAmount")
                         .HasColumnType("decimal(18,2)");
@@ -748,93 +720,91 @@ namespace Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("AccountsPayable")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("AccountsReceivable")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Address")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ContactPerson")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("FiscalNr")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsBuyer")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsBuyerForCashOnly")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsFarmer")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsFurnitor")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsInternationalSubject")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsSubjectNoExcise")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsSubjectWithoutVAT")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("MobileSales")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("NUI")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("SubjectName")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Telephone")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Website")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -845,19 +815,17 @@ namespace Server.Migrations
                 {
                     b.Property<int>("UnitId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UnitId"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("UnitId");
 
@@ -870,16 +838,16 @@ namespace Server.Migrations
             modelBuilder.Entity("Server.Models.UserBusinessUnit", b =>
                 {
                     b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("BusinessUnitId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("AssignedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("UserId", "BusinessUnitId");
 
@@ -892,18 +860,18 @@ namespace Server.Migrations
                 {
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<int>("SelectedLanguageId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("UserId");
 
@@ -916,23 +884,21 @@ namespace Server.Migrations
                 {
                     b.Property<int>("VATId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("VATId"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Description")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
 
                     b.Property<string>("VATName")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<decimal>("VATRate")
                         .HasColumnType("decimal(5,2)");
@@ -1018,6 +984,25 @@ namespace Server.Migrations
                     b.Navigation("Unit");
 
                     b.Navigation("VATTable");
+                });
+
+            modelBuilder.Entity("Server.Models.InvoiceNumberFormat", b =>
+                {
+                    b.HasOne("Server.Models.BusinessUnit", "BusinessUnit")
+                        .WithMany()
+                        .HasForeignKey("BusinessUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Server.Models.SalesCategory", "SalesCategory")
+                        .WithMany()
+                        .HasForeignKey("SalesCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BusinessUnit");
+
+                    b.Navigation("SalesCategory");
                 });
 
             modelBuilder.Entity("Server.Models.LocalizationString", b =>

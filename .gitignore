@@ -367,3 +367,7 @@ lnsert statements.txt
 Insert statements.txt
 *insert*.txt
 *Insert*.txt
+
+# SQL Lite and SQL Server Migrations
+SQL Lite Migrations/
+SQL Server Migrations/

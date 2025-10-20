@@ -10,8 +10,20 @@ using Server.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// read provider (can be overridden by environment variable)
+var provider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "SqlServer";
+
+// Register DbContext (scoped). Remove AddDbContextFactory to avoid overload/lifetime issues.
+if (provider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlite(builder.Configuration.GetConnectionString("SqliteConnection")));
+}
+else
+{
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+}
 
 builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 {
@@ -86,6 +98,34 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// If using SQLite, set busy timeout at runtime (5000 ms) via PRAGMA so concurrent small-contention writes don't fail immediately.
+// This must run after the app's service provider is built.
+if (provider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
+{
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var conn = db.Database.GetDbConnection();
+        try
+        {
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "PRAGMA busy_timeout = 5000;";
+            cmd.ExecuteNonQuery();
+        }
+        finally
+        {
+            // keep connection closed; EF will open it when needed
+            conn.Close();
+        }
+    }
+    catch
+    {
+        // swallow any PRAGMA failure — PRAGMA is best-effort and not critical for schema creation via EF tools
+    }
+}
 
 if (!app.Environment.IsDevelopment())
 {
