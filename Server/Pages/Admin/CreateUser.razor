@@ -1,0 +1,166 @@
+﻿@page "/admin/create-user"
+@using Microsoft.AspNetCore.Identity
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.EntityFrameworkCore
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+@inject NavigationManager Navigation
+@attribute [Authorize(Roles = "Admin")]
+
+<h2 style="margin-top:40px;">Create User</h2>
+
+<EditForm Model="@newUser" OnValidSubmit="HandleCreateUser">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div style="max-width: 500px; margin: 30px auto; border: 1px solid #ddd; border-radius: 8px; padding: 32px; background: #fafbfc;">
+        <table style="width:100%;">
+            <tr>
+                <td style="padding:8px;"><label>First Name:</label></td>
+                <td style="padding:8px;"><InputText @bind-Value="newUser.FirstName" class="form-control" /></td>
+            </tr>
+            <tr>
+                <td style="padding:8px;"><label>Last Name:</label></td>
+                <td style="padding:8px;"><InputText @bind-Value="newUser.LastName" class="form-control" /></td>
+            </tr>
+            <tr>
+                <td style="padding:8px;"><label>User Name:</label></td>
+                <td style="padding:8px;">
+                    <InputText @bind-Value="newUser.UserName" class="form-control" autocomplete="off" />
+                </td>
+            </tr>
+            <tr>
+                <td style="padding:8px;"><label>Email:</label></td>
+                <td style="padding:8px;"><InputText @bind-Value="newUser.Email" class="form-control" /></td>
+            </tr>
+            <tr>
+                <td style="padding:8px;"><label>Phone:</label></td>
+                <td style="padding:8px;"><InputText @bind-Value="newUser.Phone" class="form-control" /></td>
+            </tr>
+            <tr>
+                <td style="padding:8px;"><label>Password:</label></td>
+                <td style="padding:8px;">
+                    <InputText @bind-Value="newUser.Password" type="password" class="form-control" placeholder="Password" autocomplete="new-password" />
+                </td>
+            </tr>
+            <tr>
+                <td style="padding:8px;"><label>Role:</label></td>
+                <td style="padding:8px;">
+                    <InputSelect @bind-Value="newUser.Role" class="form-control">
+                        <option value="">-- Select Role --</option>
+                        @foreach (var role in roles)
+                        {
+                            <option value="@role">@role</option>
+                        }
+                    </InputSelect>
+                </td>
+            </tr>
+            <tr>
+                <td></td>
+                <td style="padding:8px;">
+                    <button type="submit" class="btn btn-primary" style="margin-right:10px;">Create</button>
+                    <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+                </td>
+            </tr>
+        </table>
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div style="margin-top:16px;">@message</div>
+        }
+    </div>
+</EditForm>
+
+@if (showSuccessModal)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Success</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-success" role="alert">
+                        User created successfully.
+                    </div>
+                    <button class="btn btn-primary" @onclick="OnSuccessOk">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private NewUserModel newUser = new();
+    private string message;
+    private List<string> roles = new();
+    private bool showSuccessModal = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        roles = (await RoleManager.Roles.Select(r => r.Name).ToListAsync());
+    }
+
+    private async Task HandleCreateUser()
+    {
+        var user = new ApplicationUser
+        {
+            FirstName = newUser.FirstName,
+            LastName = newUser.LastName,
+            UserName = newUser.UserName,
+            Email = newUser.Email,
+            PhoneNumber = newUser.Phone
+        };
+
+        var result = await UserManager.CreateAsync(user, newUser.Password);
+
+        if (result.Succeeded)
+        {
+            var roleResult = await UserManager.AddToRoleAsync(user, newUser.Role);
+            if (roleResult.Succeeded)
+            {
+                showSuccessModal = true;
+                message = "";
+                return;
+            }
+            else
+            {
+                message = "User created, but failed to assign role: " + string.Join(", ", roleResult.Errors.Select(e => e.Description));
+            }
+        }
+        else
+        {
+            message = string.Join("\n ", result.Errors.Select(e => e.Description));
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/admin"); // Change to your desired cancel/return page
+    }
+
+    private void OnSuccessOk()
+    {
+        showSuccessModal = false;
+        Navigation.NavigateTo("admin/users");
+    }
+
+    public class NewUserModel
+    {
+        [Required]
+        public string FirstName { get; set; }
+        [Required]
+        public string LastName { get; set; }
+        [Required]
+        public string UserName { get; set; }
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; }
+        public string Phone { get; set; }
+        [Required]
+        [MinLength(6)]
+        public string Password { get; set; }
+        [Required]
+        public string Role { get; set; }
+    }
+}

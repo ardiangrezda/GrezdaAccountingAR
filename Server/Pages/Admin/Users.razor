@@ -1,0 +1,228 @@
+﻿@page "/admin/users"
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using Server.Models
+@using System.ComponentModel.DataAnnotations
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Navigation
+@attribute [Authorize(Roles = "Admin")]
+
+<h2>Users</h2>
+
+<div style="margin-bottom: 1rem;">
+    <input @bind="searchTerm" placeholder="Search users..." class="form-control" style="width: 250px; display: inline-block; margin-right: 10px;" />
+    <button class="btn btn-primary" @onclick="SearchUsers">Search</button>
+    <button class="btn btn-success" style="margin-left: 20px;" @onclick="CreateUser">Create User</button>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>User Name</th>
+            <th>Email</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Phone</th>
+            <th>Role(s)</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (users != null)
+        {
+            @foreach (var userWithRoles in users)
+            {
+                <tr>
+                    <td>@userWithRoles.User.UserName</td>
+                    <td>@userWithRoles.User.Email</td>
+                    <td>@userWithRoles.User.FirstName</td>
+                    <td>@userWithRoles.User.LastName</td>
+                    <td>@userWithRoles.User.PhoneNumber</td>
+                    <td>@string.Join(", ", userWithRoles.Roles)</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" @onclick="() => OpenChangePasswordModal(userWithRoles.User)">
+                            <i class="fas fa-key"></i> Change Password
+                        </button>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@if (showChangePasswordModal)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Change Password for @selectedUser?.UserName</h5>
+                    <button type="button" class="btn-close" @onclick="CloseChangePasswordModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@changePasswordModel" OnValidSubmit="HandleChangePassword" autocomplete="off">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="mb-3">
+                            <label>New Password</label>
+                            <InputText @bind-Value="changePasswordModel.NewPassword"
+                                       type="password"
+                                       class="form-control"
+                                       autocomplete="new-password"
+                                       id="admin-new-password" />
+                        </div>
+                        <div class="mb-3">
+                            <label>Confirm Password</label>
+                            <InputText @bind-Value="changePasswordModel.ConfirmPassword"
+                                       type="password"
+                                       class="form-control"
+                                       autocomplete="new-password"
+                                       id="admin-confirm-password" />
+                        </div>
+                        <button type="submit" class="btn btn-primary">Change Password</button>
+                        <button type="button" class="btn btn-secondary ms-2" @onclick="CloseChangePasswordModal">Cancel</button>
+                    </EditForm>
+                    @if (!string.IsNullOrEmpty(changePasswordMessage))
+                    {
+                        <div class="alert alert-success mt-2" role="alert">
+                            @changePasswordMessage
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showSuccessModal)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Success</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-success" role="alert">
+                        The password change was successful.
+                    </div>
+                    <button class="btn btn-primary" @onclick="OnSuccessOk">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string searchTerm = "";
+    private List<UserWithRoles> users = new();
+    private bool showChangePasswordModal = false;
+    private bool showSuccessModal = false;
+    private ApplicationUser? selectedUser;
+    private ChangePasswordModel changePasswordModel = new();
+    private string changePasswordMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        var allUsers = UserManager.Users;
+
+        List<ApplicationUser> userList;
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            userList = await allUsers
+                .Where(u => u.UserName.Contains(searchTerm) || u.Email.Contains(searchTerm))
+                .ToListAsync();
+        }
+        else
+        {
+            userList = await allUsers.ToListAsync();
+        }
+
+        users = new List<UserWithRoles>();
+        foreach (var user in userList)
+        {
+            var roles = await UserManager.GetRolesAsync(user);
+            users.Add(new UserWithRoles
+            {
+                User = user,
+                Roles = roles.ToList()
+            });
+        }
+    }
+
+    private async Task SearchUsers()
+    {
+        await LoadUsers();
+    }
+
+    private void CreateUser()
+    {
+        Navigation.NavigateTo("/admin/create-user");
+    }
+
+    private void OpenChangePasswordModal(ApplicationUser user)
+    {
+        selectedUser = user;
+        changePasswordModel = new ChangePasswordModel();
+        changePasswordMessage = "";
+        showChangePasswordModal = true;
+    }
+
+    private void CloseChangePasswordModal()
+    {
+        showChangePasswordModal = false;
+        selectedUser = null;
+        changePasswordModel = new();
+        changePasswordMessage = "";
+    }
+
+    private async Task HandleChangePassword()
+    {
+        if (selectedUser == null)
+            return;
+
+        var token = await UserManager.GeneratePasswordResetTokenAsync(selectedUser);
+        var result = await UserManager.ResetPasswordAsync(selectedUser, token, changePasswordModel.NewPassword);
+
+        if (result.Succeeded)
+        {
+            showChangePasswordModal = false; // Hide the Change Password modal
+            showSuccessModal = true;         // Show the Success modal
+            changePasswordMessage = "";
+        }
+        else
+        {
+            changePasswordMessage = string.Join(", ", result.Errors.Select(e => e.Description));
+        }
+    }
+
+    private void OnSuccessOk()
+    {
+        showSuccessModal = false;
+        showChangePasswordModal = false;
+        Navigation.NavigateTo("/admin/users");
+    }
+
+    public class UserWithRoles
+    {
+        public ApplicationUser User { get; set; }
+        public List<string> Roles { get; set; } = new();
+    }
+
+    public class ChangePasswordModel
+    {
+        [Required]
+        [MinLength(6)]
+        public string NewPassword { get; set; }
+        [Required]
+        [Compare(nameof(NewPassword), ErrorMessage = "Passwords do not match.")]
+        public string ConfirmPassword { get; set; }
+    }
+}

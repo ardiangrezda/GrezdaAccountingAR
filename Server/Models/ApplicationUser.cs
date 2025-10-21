@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using static Server.Pages.Admin.CreateUser;
 
 namespace Server.Models
 {
@@ -24,5 +25,19 @@ namespace Server.Models
         public string FullName => $"{FirstName} {LastName}";
 
         public ICollection<UserBusinessUnit> UserBusinessUnits { get; set; } = new List<UserBusinessUnit>();
+
+        public static ApplicationUser CreateFromNewUser(NewUserModel newUser)
+        {
+            return new ApplicationUser
+            {
+                UserName = newUser.UserName,
+                Email = newUser.Email,
+                PhoneNumber = newUser.Phone,
+                FirstName = newUser.FirstName,
+                LastName = newUser.LastName,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+        }
     }
 }
