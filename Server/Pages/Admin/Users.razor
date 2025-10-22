@@ -64,28 +64,36 @@
                     <EditForm Model="@changePasswordModel" OnValidSubmit="HandleChangePassword" autocomplete="off">
                         <DataAnnotationsValidator />
                         <ValidationSummary />
+
+                        <div style="display:none;">
+                            <input type="text" name="fake-username" autocomplete="username" />
+                            <input type="password" name="fake-password" autocomplete="current-password" />
+                        </div>
+
                         <div class="mb-3">
                             <label>New Password</label>
                             <InputText @bind-Value="changePasswordModel.NewPassword"
                                        type="password"
                                        class="form-control"
-                                       autocomplete="new-password"
-                                       id="admin-new-password" />
+                                       autocomplete="off"
+                                       data-lpignore="true"
+                                       data-form-type="other" />
                         </div>
                         <div class="mb-3">
                             <label>Confirm Password</label>
                             <InputText @bind-Value="changePasswordModel.ConfirmPassword"
                                        type="password"
                                        class="form-control"
-                                       autocomplete="new-password"
-                                       id="admin-confirm-password" />
+                                       autocomplete="off"
+                                       data-lpignore="true"
+                                       data-form-type="other" />
                         </div>
                         <button type="submit" class="btn btn-primary">Change Password</button>
                         <button type="button" class="btn btn-secondary ms-2" @onclick="CloseChangePasswordModal">Cancel</button>
                     </EditForm>
                     @if (!string.IsNullOrEmpty(changePasswordMessage))
                     {
-                        <div class="alert alert-success mt-2" role="alert">
+                        <div class="alert alert-danger mt-2" role="alert">
                             @changePasswordMessage
                         </div>
                     }
