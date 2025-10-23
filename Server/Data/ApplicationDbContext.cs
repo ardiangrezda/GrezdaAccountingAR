@@ -25,6 +25,9 @@ namespace Server.Data
         public DbSet<BusinessUnit> BusinessUnits { get; set; }
         public DbSet<UserBusinessUnit> UserBusinessUnits { get; set; }
         public DbSet<InvoiceNumberFormat> InvoiceNumberFormats { get; set; }
+        public DbSet<Module> Modules { get; set; }
+        public DbSet<Submodule> Submodules { get; set; }
+        public DbSet<UserModuleAccess> UserModuleAccesses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -180,6 +183,32 @@ namespace Server.Data
                 entity.Property(e => e.Address).HasMaxLength(255);
                 entity.Property(e => e.IsActive).HasDefaultValue(true);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            });
+
+            modelBuilder.Entity<Module>()
+                .HasMany(m => m.Submodules)
+                .WithOne(s => s.Module)
+                .HasForeignKey(s => s.ModuleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<UserModuleAccess>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Module)
+                    .WithMany()
+                    .HasForeignKey(e => e.ModuleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Submodule)
+                    .WithMany()
+                    .HasForeignKey(e => e.SubmoduleId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

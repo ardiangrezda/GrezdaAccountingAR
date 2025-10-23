@@ -9,6 +9,8 @@
 @inject StateContainer StateContainer
 @implements IDisposable
 @inject ILogger<NavMenu> Logger
+@inject UserModuleAccessService UserModuleAccessService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <div class="sidebar">
     <div class="nav-header">
@@ -74,6 +76,9 @@
                     <NavLink class="nav-link sub" href="admin/user-business-units">
                         <i class="fas fa-user-shield me-2"></i>User Access
                     </NavLink>
+                    <NavLink class="nav-link sub" href="/admin/user-module-access">
+                        <i class="fas fa-user-cog me-2"></i>User Modules
+                    </NavLink>
                     <NavLink class="nav-link sub" href="admin/invoice-number-settings">
                         <i class="fas fa-hashtag me-2"></i>Invoice Number Format
                     </NavLink>
@@ -114,12 +119,28 @@
     private int defaultLanguageId = 1;
     private string? currentCategory;
     private bool isFirstRender = true;
+    private List<Module> allowedModules = new();
+    private Dictionary<int, List<Submodule>> allowedSubmodules = new();
 
     protected override async Task OnInitializedAsync()
     {
         salesCategories = await StateContainer.GetSalesCategoriesAsync();
         await StateContainer.RefreshSalesCategoriesAsync();
         defaultLanguageId = await LocalizationService.GetDefaultLanguageId();
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            allowedModules = await UserModuleAccessService.GetAllowedModulesAsync(userId);
+
+            foreach (var module in allowedModules)
+            {
+                var submodules = await UserModuleAccessService.GetAllowedSubmodulesAsync(userId, module.Id);
+                allowedSubmodules[module.Id] = submodules;
+            }
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

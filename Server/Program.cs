@@ -71,6 +71,7 @@ builder.Services.AddScoped<BusinessUnitService>();
 builder.Services.AddScoped<BusinessUnitStateContainer>();
 builder.Services.AddSingleton<StateContainer>();
 builder.Services.AddScoped<InvoiceNumberService>();
+builder.Services.AddScoped<UserModuleAccessService>();
 
 builder.Services.AddCors(options =>
 {
