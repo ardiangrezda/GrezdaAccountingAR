@@ -21,9 +21,9 @@
             <DataAnnotationsValidator />
 
             <div class="mb-3">
-                <label class="form-label">Email</label>
-                <InputText @bind-Value="loginModel.Email" class="form-control" placeholder="Enter your email" />
-                <ValidationMessage For="@(() => loginModel.Email)" />
+                <label class="form-label">Username</label>
+                <InputText @bind-Value="loginModel.Username" class="form-control" placeholder="Enter your username" />
+                <ValidationMessage For="@(() => loginModel.Username)" />
             </div>
 
             <div class="mb-3">
@@ -103,7 +103,7 @@
             errorMessage = error switch
             {
                 "failed" => "Login failed. Please check your credentials.",
-                "missing" => "Email and password are required.",
+                "missing" => "Username and password are required.",
                 "exception" => "An error occurred during login. Please try again.",
                 _ => "An unknown error occurred."
             };
@@ -118,9 +118,9 @@
             errorMessage = null;
             StateHasChanged();
 
-            if (string.IsNullOrWhiteSpace(loginModel.Email))
+            if (string.IsNullOrWhiteSpace(loginModel.Username))
             {
-                errorMessage = "Email is required";
+                errorMessage = "Username is required";
                 return;
             }
 
@@ -130,17 +130,17 @@
                 return;
             }
 
-            var user = await UserManager.FindByEmailAsync(loginModel.Email);
+            var user = await UserManager.FindByNameAsync(loginModel.Username);
             if (user == null)
             {
-                errorMessage = "Invalid email or password.";
+                errorMessage = "Invalid username or password.";
                 return;
             }
 
             var passwordValid = await UserManager.CheckPasswordAsync(user, loginModel.Password);
             if (!passwordValid)
             {
-                errorMessage = "Invalid email or password.";
+                errorMessage = "Invalid username or password.";
                 return;
             }
 
@@ -209,7 +209,7 @@
     {
         try
         {
-            await JSRuntime.InvokeVoidAsync("submitLoginForm", loginModel.Email, loginModel.Password, loginModel.RememberMe);
+            await JSRuntime.InvokeVoidAsync("submitLoginForm", loginModel.Username, loginModel.Password, loginModel.RememberMe);
         }
         catch (Exception ex)
         {
@@ -226,8 +226,7 @@
     public class LoginViewModel
     {
         [Required]
-        [EmailAddress]
-        public string Email { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
         
         [Required]
         public string Password { get; set; } = string.Empty;
@@ -287,16 +286,16 @@
 </style>
 
 <script>
-    window.submitLoginForm = function(email, password, rememberMe) {
+    window.submitLoginForm = function(username, password, rememberMe) {
         var form = document.createElement('form');
         form.method = 'POST';
         form.action = '/Account/Login';
         
-        var emailInput = document.createElement('input');
-        emailInput.type = 'hidden';
-        emailInput.name = 'email';
-        emailInput.value = email;
-        form.appendChild(emailInput);
+        var usernameInput = document.createElement('input');
+        usernameInput.type = 'hidden';
+        usernameInput.name = 'username';
+        usernameInput.value = username;
+        form.appendChild(usernameInput);
         
         var passwordInput = document.createElement('input');
         passwordInput.type = 'hidden';

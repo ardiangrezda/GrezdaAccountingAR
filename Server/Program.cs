@@ -13,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 // read provider (can be overridden by environment variable)
 var provider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "SqlServer";
 
-// Register DbContext (scoped). Remove AddDbContextFactory to avoid overload/lifetime issues.
+// Register DbContext (scoped).
 if (provider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
 {
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -71,6 +71,8 @@ builder.Services.AddScoped<BusinessUnitService>();
 builder.Services.AddScoped<BusinessUnitStateContainer>();
 builder.Services.AddSingleton<StateContainer>();
 builder.Services.AddScoped<InvoiceNumberService>();
+
+// Keep UserModuleAccessService scoped, it will create short-lived contexts via IServiceScopeFactory
 builder.Services.AddScoped<UserModuleAccessService>();
 
 builder.Services.AddCors(options =>
@@ -205,7 +207,7 @@ app.MapPost("/Account/Login", async (
     try 
     {
         var form = await context.Request.ReadFormAsync();
-        var email = form["email"].ToString();
+        var username = form["username"].ToString();
         var password = form["password"].ToString();
         var rememberMe = form["rememberMe"].ToString().ToLower() == "true";
         var returnUrl = form["returnUrl"].ToString();
@@ -213,12 +215,12 @@ app.MapPost("/Account/Login", async (
         if (string.IsNullOrEmpty(returnUrl))
             returnUrl = "/";
 
-        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
         {
             return Results.Redirect("/login?error=missing");
         }
 
-        var result = await signInManager.PasswordSignInAsync(email, password, rememberMe, lockoutOnFailure: false);
+        var result = await signInManager.PasswordSignInAsync(username, password, rememberMe, lockoutOnFailure: false);
         
         if (result.Succeeded)
         {

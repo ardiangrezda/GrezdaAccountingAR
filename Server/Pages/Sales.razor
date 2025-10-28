@@ -11,6 +11,7 @@
 @inject ILocalizationService LocalizationService
 @inject IJSRuntime JSRuntime
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserModuleAccessService UserModuleAccessService
 @attribute [Authorize]
 
 <div class="container-fluid px-4">
@@ -124,7 +125,101 @@
     {
         await GetCurrentUserAndBusinessUnit();
         
+        // Determine category id and page title (keeps previous logic)
         await SetCategoryId();
+
+        // Permission enforcement for sales variants
+        // Map incoming Category param to the variant code used in Submodule.VariantCode (e.g. "DOM", "DEL")
+        string? requestedVariant = null;
+        if (!string.IsNullOrEmpty(Category))
+        {
+            requestedVariant = Category?.ToUpper() switch
+            {
+                "DOMESTIC" => "DOM",
+                "CASH" => "CASH",
+                "EXPORT" => "EXP",
+                "DELIVERY" => "DEL",
+                "SERVICE" => "SERV",
+                "CREDIT-NOTE" => "CN",
+                "RETURNS" => "RET",
+                "OTHER" => "OTHER",
+                "SUMMARY" => "SUM",
+                "PRINTING" => "PRINT",
+                "BARCODE" => "BAR",
+                _ => null
+            };
+        }
+
+        // Find Sales module definition
+        var allModules = await UserModuleAccessService.GetModulesAsync();
+        var salesModule = allModules.FirstOrDefault(m =>
+            string.Equals(m.RazorPage, "Sales.razor", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(m.Name, "Sales", StringComparison.OrdinalIgnoreCase));
+
+        // If user provided a category, check access for that variant
+        if (!string.IsNullOrEmpty(requestedVariant) && salesModule != null)
+        {
+            var allowed = await UserModuleAccessService.HasAccessToPageAsync(currentUserId ?? "", "Sales.razor", requestedVariant);
+            if (!allowed)
+            {
+                // not allowed -> redirect to forbidden
+                Navigation.NavigateTo("/forbidden");
+                return;
+            }
+        }
+
+        // If no category requested, and user has only variant access, redirect to first allowed variant
+        if (string.IsNullOrEmpty(requestedVariant) && salesModule != null)
+        {
+            // get submodules the user has access to
+            var allowedSubs = await UserModuleAccessService.GetAllowedSubmodulesAsync(currentUserId ?? "", salesModule.Id);
+            if (allowedSubs.Any())
+            {
+                // Check module-level access (module-level access allows all categories)
+                var allowedModules = await UserModuleAccessService.GetAllowedModulesAsync(currentUserId ?? "");
+                var hasModuleAccess = allowedModules.Any(m => m.Id == salesModule.Id);
+
+                if (!hasModuleAccess)
+                {
+                    // user only has submodule-level access -> navigate to first allowed category
+                    var firstVariant = allowedSubs.Select(s => s.VariantCode).FirstOrDefault(v => !string.IsNullOrEmpty(v));
+                    if (!string.IsNullOrEmpty(firstVariant))
+                    {
+                        // map variant-code back to route
+                        var route = firstVariant.ToLower() switch
+                        {
+                            "dom" => "/sales/domestic",
+                            "cash" => "/sales/cash",
+                            "exp" => "/sales/export",
+                            "del" => "/sales/delivery",
+                            "serv" => "/sales/service",
+                            "cn" => "/sales/credit-note",
+                            "ret" => "/sales/returns",
+                            "other" => "/sales/other",
+                            "sum" => "/sales/summary",
+                            "print" => "/sales/printing",
+                            "bar" => "/sales/barcode",
+                            _ => "/sales"
+                        };
+
+                        Navigation.NavigateTo(route);
+                        return;
+                    }
+                }
+            }
+            else
+            {
+                // No allowed submodules and no module-level access -> if user has no access, redirect to forbidden
+                var allowedModulesForUser = await UserModuleAccessService.GetAllowedModulesAsync(currentUserId ?? "");
+                var hasModule = salesModule != null && allowedModulesForUser.Any(m => m.Id == salesModule.Id);
+                if (!hasModule)
+                {
+                    Navigation.NavigateTo("/forbidden");
+                    return;
+                }
+            }
+        }
+
         await LoadSales();
     }
 

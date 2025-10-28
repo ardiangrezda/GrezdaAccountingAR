@@ -17,6 +17,9 @@ namespace Server.Models
         [StringLength(100)]
         public string? RazorPage { get; set; }
 
+        [StringLength(50)]
+        public string? VariantCode { get; set; }
+
         [Required]
         public int ModuleId { get; set; }
 

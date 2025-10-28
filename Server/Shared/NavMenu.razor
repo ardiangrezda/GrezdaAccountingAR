@@ -37,7 +37,7 @@
             @if (showShitjeSubMenu)
             {
                 <div class="submenu">
-                    @foreach (var category in salesCategories)
+                    @foreach (var category in salesCategories.Where(IsCategoryAllowed))
                     {
                         <NavLink class="@($"nav-link sub {(IsCurrentCategory(category.Code) ? "active-category" : "")}")" 
                                  href="@GetCategoryRoute(category.Code)">
@@ -77,7 +77,7 @@
                         <i class="fas fa-user-shield me-2"></i>User Access
                     </NavLink>
                     <NavLink class="nav-link sub" href="/admin/user-module-access">
-                        <i class="fas fa-user-cog me-2"></i>User Modules
+                        <i class="fas fa-layer-group me-2"></i>User Modules
                     </NavLink>
                     <NavLink class="nav-link sub" href="admin/invoice-number-settings">
                         <i class="fas fa-hashtag me-2"></i>Invoice Number Format
@@ -121,6 +121,8 @@
     private bool isFirstRender = true;
     private List<Module> allowedModules = new();
     private Dictionary<int, List<Submodule>> allowedSubmodules = new();
+    private HashSet<string> allowedSalesVariants = new(StringComparer.OrdinalIgnoreCase);
+    private bool allowAllSales = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -140,7 +142,56 @@
                 var submodules = await UserModuleAccessService.GetAllowedSubmodulesAsync(userId, module.Id);
                 allowedSubmodules[module.Id] = submodules;
             }
+
+            // Build sales-specific allowed variant list
+            // If user has module-level access to Sales, allow all categories
+            var salesModule = allowedModules.FirstOrDefault(m =>
+                string.Equals(m.RazorPage, "Sales.razor", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(m.Name, "Sales", StringComparison.OrdinalIgnoreCase));
+
+            if (salesModule != null)
+            {
+                // module-level access -> allow all sales categories
+                allowAllSales = true;
+
+                // also collect submodules if present
+                var subs = await UserModuleAccessService.GetAllowedSubmodulesAsync(userId, salesModule.Id);
+                foreach (var s in subs)
+                {
+                    if (!string.IsNullOrEmpty(s.VariantCode))
+                        allowedSalesVariants.Add(s.VariantCode);
+                }
+            }
+            else
+            {
+                // if user has no module-level access, collect any submodule-level access for Sales
+                // Need to inspect all modules (module-level may not include sales); get modules list
+                var allModules = await UserModuleAccessService.GetModulesAsync();
+                var salesMod = allModules.FirstOrDefault(m =>
+                    string.Equals(m.RazorPage, "Sales.razor", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(m.Name, "Sales", StringComparison.OrdinalIgnoreCase));
+
+                if (salesMod != null)
+                {
+                    var subs = await UserModuleAccessService.GetAllowedSubmodulesAsync(userId, salesMod.Id);
+                    foreach (var s in subs)
+                    {
+                        if (!string.IsNullOrEmpty(s.VariantCode))
+                            allowedSalesVariants.Add(s.VariantCode);
+                    }
+                }
+            }
         }
+    }
+
+    private bool IsCategoryAllowed(SalesCategory category)
+    {
+        if (allowAllSales) return true;
+
+        // Fallback: if no variant restrictions found for user, show all categories to avoid accidentally hiding everything
+        if (allowedSalesVariants.Count == 0) return true;
+
+        return allowedSalesVariants.Contains(category.Code);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
