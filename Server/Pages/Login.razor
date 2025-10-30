@@ -16,7 +16,7 @@
 <div class="login-container">
     <div class="login-box">
         <h3 class="text-center mb-4">Accounting System</h3>
-        
+
         <EditForm Model="@loginModel" OnValidSubmit="@HandleValidSubmit" OnInvalidSubmit="@HandleInvalidSubmit">
             <DataAnnotationsValidator />
 
@@ -55,11 +55,11 @@
                         <div class="text-danger"><small>Please select a business unit</small></div>
                     }
                 </div>
-                
+
                 <button type="button" class="btn btn-success w-100 mb-2" @onclick="HandleBusinessUnitSelection">
                     Continue with Selected Business Unit
                 </button>
-                
+
                 <button type="button" class="btn btn-secondary w-100" @onclick="GoBackToLogin">
                     Back to Login
                 </button>
@@ -93,11 +93,11 @@
     protected override void OnInitialized()
     {
         editContext = new EditContext(loginModel);
-        
+
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
         var error = query["error"];
-        
+
         if (!string.IsNullOrEmpty(error))
         {
             errorMessage = error switch
@@ -144,9 +144,16 @@
                 return;
             }
 
+            var emailConfirmed = await UserManager.IsEmailConfirmedAsync(user);
+            if (!emailConfirmed)
+            {
+                errorMessage = "Email address is not confirmed. Please check your email for the confirmation link or contact your administrator.";
+                return;
+            }
+
             var isAdmin = await UserManager.IsInRoleAsync(user, "Admin");
             availableBusinessUnits = await BusinessUnitService.GetUserBusinessUnitsAsync(user.Id, isAdmin);
-            
+
             if (!availableBusinessUnits.Any())
             {
                 errorMessage = "No business units assigned to this user. Please contact an administrator.";
@@ -207,14 +214,8 @@
 
     private async Task PerformSignIn()
     {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("submitLoginForm", loginModel.Username, loginModel.Password, loginModel.RememberMe);
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error during sign in: {ex.Message}";
-        }
+        // Use the client-side form POST so the server can set the cookie on the HTTP response.
+        await JSRuntime.InvokeVoidAsync("submitLoginForm", loginModel.Username, loginModel.Password, loginModel.RememberMe);
     }
 
     private async Task HandleInvalidSubmit()
@@ -227,10 +228,10 @@
     {
         [Required]
         public string Username { get; set; } = string.Empty;
-        
+
         [Required]
         public string Password { get; set; } = string.Empty;
-        
+
         public bool RememberMe { get; set; }
     }
 }
@@ -267,10 +268,10 @@
         font-size: 0.95rem;
     }
 
-    .form-control:focus {
-        border-color: #1a237e;
-        box-shadow: 0 0 0 0.2rem rgba(26, 35, 126, 0.25);
-    }
+        .form-control:focus {
+            border-color: #1a237e;
+            box-shadow: 0 0 0 0.2rem rgba(26, 35, 126, 0.25);
+        }
 
     .btn {
         padding: 0.75rem 1.5rem;
@@ -290,31 +291,31 @@
         var form = document.createElement('form');
         form.method = 'POST';
         form.action = '/Account/Login';
-        
+
         var usernameInput = document.createElement('input');
         usernameInput.type = 'hidden';
         usernameInput.name = 'username';
         usernameInput.value = username;
         form.appendChild(usernameInput);
-        
+
         var passwordInput = document.createElement('input');
         passwordInput.type = 'hidden';
         passwordInput.name = 'password';
         passwordInput.value = password;
         form.appendChild(passwordInput);
-        
+
         var rememberMeInput = document.createElement('input');
         rememberMeInput.type = 'hidden';
         rememberMeInput.name = 'rememberMe';
         rememberMeInput.value = rememberMe.toString();
         form.appendChild(rememberMeInput);
-        
+
         var returnUrlInput = document.createElement('input');
         returnUrlInput.type = 'hidden';
         returnUrlInput.name = 'returnUrl';
         returnUrlInput.value = '/';
         form.appendChild(returnUrlInput);
-        
+
         document.body.appendChild(form);
         form.submit();
     };

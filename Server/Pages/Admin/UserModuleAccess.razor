@@ -1,9 +1,10 @@
 @page "/admin/user-module-access"
 @using Server.Models
 @using Server.Services
+@using Microsoft.AspNetCore.Identity
 @inject UserModuleAccessService UserModuleAccessService
 @inject NavigationManager Navigation
-@inject ILogger<UserModuleAccess> Logger
+@inject UserManager<ApplicationUser> UserManager
 
 @attribute [Authorize(Roles = "Admin")]
 
@@ -21,17 +22,26 @@
         }
         else
         {
-            <div class="list-group">
-                @foreach (var user in FilteredUsers)
-                {
-                    <button class="list-group-item list-group-item-action @(selectedUser?.Id == user.Id ? "active" : "")"
-                            @onclick="() => SelectUser(user)">
-                        <div class="d-flex w-100 justify-content-between">
-                            <strong>@user.FullName</strong>
-                            <small class="text-muted">@user.Email</small>
-                        </div>
-                    </button>
-                }
+            <div class="user-list mb-2">
+                <div class="user-list-header">
+                    <div class="user-list-col-username">Username</div>
+                    <div class="user-list-col-role text-end">Role</div>
+                </div>
+
+                <div class="user-list-body">
+                    @foreach (var user in FilteredUsers)
+                    {
+                        <button class="list-item-btn @(selectedUser?.Id == user.Id ? "active" : "")"
+                                @onclick="() => SelectUser(user)">
+                            <div class="user-row">
+                                <div>
+                                    <strong>@user.UserName</strong>
+                                </div>
+                                <div class="text-end text-secondary user-role">@GetUserRoleDisplay(user.Id)</div>
+                            </div>
+                        </button>
+                    }
+                </div>
             </div>
         }
     </div>
@@ -49,7 +59,7 @@
         {
             <div class="card">
                 <div class="card-header">
-                    Configuring access for: <strong>@selectedUser.FullName</strong> (@selectedUser.Email)
+                    Configuring access for: <strong>@selectedUser.UserName</strong> (@selectedUser.Email)
                 </div>
                 <div class="card-body">
                     @foreach (var module in modules)
@@ -104,16 +114,35 @@
     private UserAccessViewModel currentAccess = new();
     private readonly Dictionary<string, UserAccessViewModel> accessCache = new();
 
+    private readonly Dictionary<string, string> userRoles = new();
+
+
     private IEnumerable<ApplicationUser> FilteredUsers =>
         string.IsNullOrWhiteSpace(searchTerm)
             ? users
-            : users.Where(u => (u.FullName ?? "").Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
-                            || (u.Email ?? "").Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+            : users.Where(u => (u.UserName ?? "").Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
         users = await UserModuleAccessService.GetUsersAsync();
         modules = await UserModuleAccessService.GetModulesAsync();
+
+        var ids = users.Select(u => u.Id).ToList();
+        var rolesMap = await UserModuleAccessService.GetRolesForUsersAsync(ids);
+
+        foreach (var u in users)
+        {
+            userRoles[u.Id] = rolesMap.TryGetValue(u.Id, out var roles) && !string.IsNullOrEmpty(roles)
+                ? roles
+                : string.Empty;
+        }
+    }
+
+    private string GetUserRoleDisplay(string userId)
+    {
+        if (userRoles.TryGetValue(userId, out var roles) && !string.IsNullOrEmpty(roles))
+            return roles;
+        return "No role";
     }
 
     private async Task SelectUser(ApplicationUser user)
@@ -137,19 +166,22 @@
                                 .ToDictionary(s => s.Id, _ => false)
         };
 
-        // Load allowed modules and submodules for the selected user
-        var allowedModules = await UserModuleAccessService.GetAllowedModulesAsync(user.Id);
-        foreach (var am in allowedModules)
+        // Load allowed module/submodule entries for the selected user (single DB call)
+        var accessEntries = await UserModuleAccessService.GetUserAccessEntriesAsync(user.Id);
+        foreach (var entry in accessEntries)
         {
-            if (currentAccess.Modules.ContainsKey(am.Id))
-                currentAccess.Modules[am.Id] = true;
-
-            // load submodules for this module
-            var allowedSubs = await UserModuleAccessService.GetAllowedSubmodulesAsync(user.Id, am.Id);
-            foreach (var sub in allowedSubs)
+            if (entry.SubmoduleId == null)
             {
-                if (currentAccess.Submodules.ContainsKey(sub.Id))
-                    currentAccess.Submodules[sub.Id] = true;
+                // module-level access
+                if (currentAccess.Modules.ContainsKey(entry.ModuleId))
+                    currentAccess.Modules[entry.ModuleId] = true;
+            }
+            else
+            {
+                // submodule-level access
+                var subId = entry.SubmoduleId.Value;
+                if (currentAccess.Submodules.ContainsKey(subId))
+                    currentAccess.Submodules[subId] = true;
             }
         }
 
@@ -159,26 +191,15 @@
 
     private async Task SaveAccess()
     {
-        Logger.LogInformation("SaveAccess invoked. selectedUserId = {UserId}", selectedUser?.Id);
 
         if (selectedUser == null)
         {
-            Logger.LogWarning("SaveAccess aborted: no selected user.");
             return;
         }
 
-        try
-        {
-            await UserModuleAccessService.SaveUserAccessAsync(selectedUser.Id, currentAccess);
-            accessCache[selectedUser.Id] = CloneAccess(currentAccess);
-            Logger.LogInformation("SaveAccess completed for user {UserId}", selectedUser.Id);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "SaveAccess failed for user {UserId}", selectedUser.Id);
-            throw;
-        }
-    }
+        await UserModuleAccessService.SaveUserAccessAsync(selectedUser.Id, currentAccess);
+        accessCache[selectedUser.Id] = CloneAccess(currentAccess);
+   }
 
     private async Task ReloadUserAccess()
     {
@@ -196,3 +217,70 @@
         };
     }
 }
+
+<style>
+    /* List-like left column with aligned Username / Role columns */
+    .user-list {
+        border: 1px solid #dee2e6;
+        border-radius: .375rem;
+        overflow: hidden;
+    }
+
+    .user-list-header {
+        background-color: #f8f9fa;
+        color: #212529;
+        font-weight: 600;
+        display: grid;
+        grid-template-columns: 1fr 140px;
+        align-items: center;
+        padding: .5rem .75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .user-list-body {
+        max-height: 420px; /* keep list scrollable if long */
+        overflow-y: auto;
+    }
+
+    .user-row {
+        display: grid;
+        grid-template-columns: 1fr 140px;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .list-item-btn {
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: transparent;
+        padding: .5rem .75rem;
+        border-bottom: 1px solid #f1f1f1;
+    }
+
+    .list-item-btn:last-child {
+        border-bottom: none;
+    }
+
+    .list-item-btn:hover {
+        background-color: #f1f7ff;
+    }
+
+    .list-item-btn.active {
+        background-color: #e9f0ff;
+        font-weight: 600;
+    }
+
+    .user-role {
+        white-space: nowrap;
+        padding-left: .5rem;
+    }
+
+    /* keep header labels aligned with content on small screens */
+    @@media (max-width: 576px) {
+        .user-list-header,
+        .user-row {
+            grid-template-columns: 1fr 110px;
+        }
+    }
+</style>
