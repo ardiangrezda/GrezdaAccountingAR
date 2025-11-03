@@ -18,92 +18,117 @@
     </div>
 
     <nav class="flex-column">
-        <div class="nav-item">
-            <NavLink class="nav-link" href="subjects">  @* Changed from "subjektet" *@
-                <span>Subjects</span>
-            </NavLink>
-        </div>
+        @if (HasModuleAccess("Subjects"))
+        {
+            <div class="nav-item">
+                <NavLink class="nav-link" href="subjects">  @* Changed from "subjektet" *@
+                    <span>Subjects</span>
+                </NavLink>
+            </div>
+        }
 
-        <div class="nav-item">
-            <NavLink class="nav-link" href="blerje">
-                <span>Blerje</span>
-            </NavLink>
-        </div>
+        @if (HasModuleAccess("Blerje"))
+        {
+            <div class="nav-item">
+                <NavLink class="nav-link" href="blerje">
+                    <span>Blerje</span>
+                </NavLink>
+            </div>
+        }
 
-        <div class="nav-item">
-            <NavLink class="nav-link" @onclick="ToggleShitjeSubMenu">
-                <i class="oi oi-cart" aria-hidden="true"></i><span>Shitje</span>
-            </NavLink>
-            @if (showShitjeSubMenu)
-            {
-                <div class="submenu">
-                    @foreach (var category in salesCategories.Where(IsCategoryAllowed))
-                    {
-                        <NavLink class="@($"nav-link sub {(IsCurrentCategory(category.Code) ? "active-category" : "")}")" 
-                                 href="@GetCategoryRoute(category.Code)">
-                            <i class="fas fa-angle-right me-2"></i>
-                            @(GetLocalizedText(category.NameString?.StringKey))
+        @if (HasModuleAccess("Sales", "Shitje"))
+        {
+            <div class="nav-item">
+                <NavLink class="nav-link" @onclick="ToggleShitjeSubMenu">
+                    <i class="oi oi-cart" aria-hidden="true"></i><span>Shitje</span>
+                </NavLink>
+                @if (showShitjeSubMenu)
+                {
+                    <div class="submenu">
+                        @foreach (var category in salesCategories.Where(IsCategoryAllowed))
+                        {
+                            <NavLink class="@($"nav-link sub {(IsCurrentCategory(category.Code) ? "active-category" : "")}")" 
+                                     href="@GetCategoryRoute(category.Code)">
+                                <i class="fas fa-angle-right me-2"></i>
+                                @(GetLocalizedText(category.NameString?.StringKey))
+                            </NavLink>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        @if (HasModuleAccess("Levizje interne"))
+        {
+            <div class="nav-item">
+                <NavLink class="nav-link" href="levizje-interne">
+                    <span>Levizje interne</span>
+                </NavLink>
+            </div>
+        }
+
+        @if (HasModuleAccess("Pagesa"))
+        {
+            <div class="nav-item">
+                <NavLink class="nav-link" href="pagesa">
+                    <span>Pagesa</span>
+                </NavLink>
+            </div>
+        }
+
+        @if (HasModuleAccess("Kontabiliteti"))
+        {
+            <div class="nav-item">
+                <NavLink class="nav-link" href="kontabiliteti">
+                    <span>Kontabiliteti</span>
+                </NavLink>
+            </div>
+        }
+
+        @if (isAdmin)  @* Administrimi should be visible only to Admin role per your requirement *@
+        {
+            <div class="nav-item">
+                <NavLink class="nav-link" @onclick="ToggleAdminSubMenu" >
+                    <i class="oi oi-person" aria-hidden="true"></i><span>Administrimi</span>
+                </NavLink>
+                @if (showAdminSubMenu)
+                {
+                    <div class="submenu">
+                        <NavLink class="nav-link sub" href="admin/business-units">
+                            <i class="fas fa-store me-2"></i>Business Units
                         </NavLink>
-                    }
-                </div>
-            }
-        </div>
-        <div class="nav-item">
-            <NavLink class="nav-link" href="levizje-interne">
-                <span>Levizje interne</span>
-            </NavLink>
-        </div>
-        <div class="nav-item">
-            <NavLink class="nav-link" href="pagesa">
-                <span>Pagesa</span>
-            </NavLink>
-        </div>
-        <div class="nav-item">
-            <NavLink class="nav-link" href="kontabiliteti">
-                <span>Kontabiliteti</span>
-            </NavLink>
-        </div>
-        <div class="nav-item">
-            <NavLink class="nav-link" @onclick="ToggleAdminSubMenu" >
-                <i class="oi oi-person" aria-hidden="true"></i><span>Administrimi</span>
-            </NavLink>
-            @if (showAdminSubMenu)
-            {
-                <div class="submenu">
-                    <NavLink class="nav-link sub" href="admin/business-units">
-                        <i class="fas fa-store me-2"></i>Business Units
-                    </NavLink>
-                    <NavLink class="nav-link sub" href="admin/user-business-units">
-                        <i class="fas fa-user-shield me-2"></i>User Access
-                    </NavLink>
-                    <NavLink class="nav-link sub" href="/admin/user-module-access">
-                        <i class="fas fa-layer-group me-2"></i>User Modules
-                    </NavLink>
-                    <NavLink class="nav-link sub" href="admin/invoice-number-settings">
-                        <i class="fas fa-hashtag me-2"></i>Invoice Number Format
-                    </NavLink>
-                    <NavLink class="nav-link sub" href="admin/users">
-                        <i class="fas fa-user me-2"></i>Users
-                    </NavLink>
-                </div>
-            }
-        </div>
-        <div class="nav-item">
-            <NavLink class="nav-link" href="articles">
-                <i class="oi oi-list-rich" aria-hidden="true"></i><span>Artikulli</span>
-            </NavLink>
-        </div>
+                        <NavLink class="nav-link sub" href="admin/user-business-units">
+                            <i class="fas fa-user-shield me-2"></i>User Access
+                        </NavLink>
+                        <NavLink class="nav-link sub" href="/admin/user-module-access">
+                            <i class="fas fa-layer-group me-2"></i>User Modules
+                        </NavLink>
+                        <NavLink class="nav-link sub" href="admin/invoice-number-settings">
+                            <i class="fas fa-hashtag me-2"></i>Invoice Number Format
+                        </NavLink>
+                        <NavLink class="nav-link sub" href="admin/users">
+                            <i class="fas fa-user me-2"></i>Users
+                        </NavLink>
+                    </div>
+                }
+            </div>
+        }
+
+        @if (HasModuleAccess("Articles"))
+        {
+            <div class="nav-item">
+                <NavLink class="nav-link" href="articles">
+                <i class="oi oi-list-rich" aria-hidden="true"></i><span>Articles</span>
+                </NavLink>
+            </div>
+        }
+
         <div class="nav-item">
             <NavLink class="nav-link sub" href="change-password">
                 <i class="fas fa-key me-2"></i>Change Password
             </NavLink>
         </div>
-        <!--
-        Remove language switcher for now
-        <div class="nav-item">
-            <LanguageSwitcher />
-        </div>
-        -->
+
         <div class="nav-item">
             <button @onclick="HandleLogoutAsync" class="nav-link btn btn-link logout-btn">
                 <span class="oi oi-account-logout" aria-hidden="true"></span> Logout
@@ -113,6 +138,27 @@
 </div>
 
 @code {
+    // --- simple in-memory per-user cache (30 minute TTL) ---
+    private class AccessCacheEntry
+    {
+        public List<Module> AllowedModules { get; set; } = new();
+        public Dictionary<int, List<Submodule>> AllowedSubmodules { get; set; } = new();
+        public HashSet<string> AllowedSalesVariants { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public bool AllowAllSales { get; set; }
+        public bool IsAdmin { get; set; }
+        public DateTimeOffset FetchedAt { get; set; }
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, AccessCacheEntry> _accessCache
+        = new();
+
+    // small lock-per-user to avoid duplicate refreshes
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, System.Threading.SemaphoreSlim> _userLocks
+        = new();
+
+    private readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(30);
+
+    // existing fields (kept from your file)
     private bool showShitjeSubMenu = false;
     private bool showAdminSubMenu = false;
     private List<SalesCategory> salesCategories = new();
@@ -123,6 +169,7 @@
     private Dictionary<int, List<Submodule>> allowedSubmodules = new();
     private HashSet<string> allowedSalesVariants = new(StringComparer.OrdinalIgnoreCase);
     private bool allowAllSales = false;
+    private bool isAdmin = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -133,55 +180,193 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        if (!string.IsNullOrEmpty(userId))
+        if (string.IsNullOrEmpty(userId))
+            return;
+
+        var lockForUser = _userLocks.GetOrAdd(userId, _ => new System.Threading.SemaphoreSlim(1, 1));
+        await lockForUser.WaitAsync();
+        try
         {
-            allowedModules = await UserModuleAccessService.GetAllowedModulesAsync(userId);
-
-            foreach (var module in allowedModules)
+            // Use cached entry if fresh
+            if (_accessCache.TryGetValue(userId, out var cached) &&
+                (DateTimeOffset.UtcNow - cached.FetchedAt) < _cacheDuration)
             {
-                var submodules = await UserModuleAccessService.GetAllowedSubmodulesAsync(userId, module.Id);
-                allowedSubmodules[module.Id] = submodules;
+                ApplyCacheToLocalState(cached);
+                return;
             }
 
-            // Build sales-specific allowed variant list
-            // If user has module-level access to Sales, allow all categories
-            var salesModule = allowedModules.FirstOrDefault(m =>
-                string.Equals(m.RazorPage, "Sales.razor", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(m.Name, "Sales", StringComparison.OrdinalIgnoreCase));
+            // Not cached (or expired) -> compute and store
+            var entry = await BuildAccessEntryForUser(userId);
+            _accessCache[userId] = entry;
+            ApplyCacheToLocalState(entry);
+        }
+        finally
+        {
+            lockForUser.Release();
+        }
+    }
 
-            if (salesModule != null)
+    // Build the access entry by reading the same persisted rows your admin UI saves.
+    private async Task<AccessCacheEntry> BuildAccessEntryForUser(string userId)
+    {
+        var entry = new AccessCacheEntry
+        {
+            FetchedAt = DateTimeOffset.UtcNow
+        };
+
+        // determine role (Admin) using your existing service method
+        try
+        {
+            var rolesMap = await UserModuleAccessService.GetRolesForUsersAsync(new[] { userId });
+            if (rolesMap.TryGetValue(userId, out var roles) && !string.IsNullOrEmpty(roles))
             {
-                // module-level access -> allow all sales categories
-                allowAllSales = true;
-
-                // also collect submodules if present
-                var subs = await UserModuleAccessService.GetAllowedSubmodulesAsync(userId, salesModule.Id);
-                foreach (var s in subs)
-                {
-                    if (!string.IsNullOrEmpty(s.VariantCode))
-                        allowedSalesVariants.Add(s.VariantCode);
-                }
-            }
-            else
-            {
-                // if user has no module-level access, collect any submodule-level access for Sales
-                // Need to inspect all modules (module-level may not include sales); get modules list
-                var allModules = await UserModuleAccessService.GetModulesAsync();
-                var salesMod = allModules.FirstOrDefault(m =>
-                    string.Equals(m.RazorPage, "Sales.razor", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(m.Name, "Sales", StringComparison.OrdinalIgnoreCase));
-
-                if (salesMod != null)
-                {
-                    var subs = await UserModuleAccessService.GetAllowedSubmodulesAsync(userId, salesMod.Id);
-                    foreach (var s in subs)
-                    {
-                        if (!string.IsNullOrEmpty(s.VariantCode))
-                            allowedSalesVariants.Add(s.VariantCode);
-                    }
-                }
+                var roleList = roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                entry.IsAdmin = roleList.Any(r => string.Equals(r, "Admin", StringComparison.OrdinalIgnoreCase));
             }
         }
+        catch
+        {
+            entry.IsAdmin = false;
+        }
+
+        if (entry.IsAdmin)
+        {
+            // Admin sees everything; allow all sales
+            entry.AllowAllSales = true;
+            // still populate Modules list minimally so HasModuleAccess checks still work
+            entry.AllowedModules = await UserModuleAccessService.GetModulesAsync();
+            return entry;
+        }
+
+        // Non-admin: use persisted UserModuleAccess rows (this mirrors SaveAccess)
+        var accessRows = await UserModuleAccessService.GetUserAccessEntriesAsync(userId);
+        var allModules = await UserModuleAccessService.GetModulesAsync();
+
+        var allowedModules = new List<Module>();
+        var allowedSubmodules = new Dictionary<int, List<Submodule>>();
+
+        foreach (var module in allModules)
+        {
+            var rowsForModule = accessRows.Where(e => e.ModuleId == module.Id).ToList();
+            if (!rowsForModule.Any()) continue;
+
+            // user has module-level access or some submodule entries
+            allowedModules.Add(module);
+
+            // gather allowed submodule ids for this module
+            var subIds = rowsForModule.Where(r => r.SubmoduleId != null).Select(r => r.SubmoduleId!.Value).Distinct().ToList();
+            var subs = (module.Submodules ?? Enumerable.Empty<Submodule>()).Where(s => subIds.Contains(s.Id)).ToList();
+
+            // fallback: if module.Submodules not loaded, use navigation property on access row
+            if (!subs.Any() && subIds.Any())
+            {
+                subs = accessRows
+                    .Where(r => r.ModuleId == module.Id && r.SubmoduleId != null)
+                    .Select(r => r.Submodule)
+                    .Where(s => s != null)
+                    .Select(s => s!)
+                    .Distinct()
+                    .ToList();
+            }
+
+            allowedSubmodules[module.Id] = subs;
+        }
+
+        // sales-specific: module-level entry with SubmoduleId == null means allow all
+        var salesDef = allModules.FirstOrDefault(m =>
+            string.Equals(m.RazorPage, "Sales.razor", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(m.Name, "Sales", StringComparison.OrdinalIgnoreCase));
+
+        if (salesDef != null)
+        {
+            var moduleLevelEntry = accessRows.FirstOrDefault(e => e.ModuleId == salesDef.Id && e.SubmoduleId == null);
+            if (moduleLevelEntry != null)
+                entry.AllowAllSales = true;
+
+            var salesSubVariants = accessRows
+                .Where(e => e.ModuleId == salesDef.Id && e.SubmoduleId != null)
+                .Select(e => e.Submodule)
+                .Where(s => s != null && !string.IsNullOrEmpty(s.VariantCode))
+                .Select(s => s!.VariantCode!)
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var v in salesSubVariants)
+                entry.AllowedSalesVariants.Add(v);
+        }
+
+        entry.AllowedModules = allowedModules;
+        entry.AllowedSubmodules = allowedSubmodules;
+        return entry;
+    }
+
+    // Helper: apply a cache entry to local component state used by rendering logic
+    private void ApplyCacheToLocalState(AccessCacheEntry cached)
+    {
+        allowedModules = cached.AllowedModules ?? new List<Module>();
+        allowedSubmodules = cached.AllowedSubmodules ?? new Dictionary<int, List<Submodule>>();
+        allowedSalesVariants = cached.AllowedSalesVariants ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        allowAllSales = cached.AllowAllSales;
+        isAdmin = cached.IsAdmin;
+    }
+
+    // Call this when user logs out so we don't hold stale access for that user
+    private async Task HandleLogoutAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                _accessCache.TryRemove(userId, out _);
+                _userLocks.TryRemove(userId, out _);
+            }
+
+            await JSRuntime.InvokeVoidAsync("localStorage.clear");
+            await JSRuntime.InvokeVoidAsync("sessionStorage.clear");
+            await JSRuntime.InvokeVoidAsync("eval", "window.location.href = '/logout'");
+        }
+        catch (Exception)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "window.location.href = '/login'");
+        }
+    }
+
+    private bool HasModuleAccess(params string[] candidates)
+    {
+        if (isAdmin) return true;
+
+        // If we couldn't initialize access lists treat as no access
+        if (allowedModules == null) return false;
+
+        foreach (var cand in candidates)
+        {
+            if (string.IsNullOrWhiteSpace(cand)) continue;
+
+            // direct module name match
+            if (allowedModules.Any(m => string.Equals(m.Name, cand, StringComparison.OrdinalIgnoreCase)))
+                return true;
+
+            // RazorPage match variants
+            if (allowedModules.Any(m =>
+                !string.IsNullOrEmpty(m.RazorPage) &&
+                (string.Equals(m.RazorPage, cand, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(m.RazorPage, cand + ".razor", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(m.RazorPage, "/" + cand, StringComparison.OrdinalIgnoreCase))))
+            {
+                return true;
+            }
+        }
+
+        // Sales parent: if user has sales submodules or module-level allow parent
+        if (candidates.Any(c => string.Equals(c, "Sales", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(c, "Shitje", StringComparison.OrdinalIgnoreCase)))
+        {
+            if (allowAllSales) return true;
+            if (allowedSalesVariants.Count > 0) return true;
+        }
+
+        return false;
     }
 
     private bool IsCategoryAllowed(SalesCategory category)
@@ -311,22 +496,6 @@
 
         var categoryRoute = GetCategoryRoute(code).ToLower();
         return currentPath.EndsWith(categoryRoute, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private async Task HandleLogoutAsync()
-    {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("localStorage.clear");
-            await JSRuntime.InvokeVoidAsync("sessionStorage.clear");
-
-            await JSRuntime.InvokeVoidAsync("eval", "window.location.href = '/logout'");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Logout error: {ex.Message}");
-            await JSRuntime.InvokeVoidAsync("eval", "window.location.href = '/login'");
-        }
     }
 
     private string GetCategoryRoute(string code)

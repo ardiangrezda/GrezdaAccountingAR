@@ -5,6 +5,7 @@
 @inject UserModuleAccessService UserModuleAccessService
 @inject NavigationManager Navigation
 @inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 @attribute [Authorize(Roles = "Admin")]
 
@@ -62,7 +63,7 @@
                     Configuring access for: <strong>@selectedUser.UserName</strong> (@selectedUser.Email)
                 </div>
                 <div class="card-body">
-                    @foreach (var module in modules)
+                    @foreach (var module in modules.Where(m => CanSeeModule(m)))
                     {
                         <div class="mb-3">
                             <div class="form-check">
@@ -115,7 +116,7 @@
     private readonly Dictionary<string, UserAccessViewModel> accessCache = new();
 
     private readonly Dictionary<string, string> userRoles = new();
-
+    private bool isAdmin;
 
     private IEnumerable<ApplicationUser> FilteredUsers =>
         string.IsNullOrWhiteSpace(searchTerm)
@@ -135,6 +136,27 @@
             userRoles[u.Id] = rolesMap.TryGetValue(u.Id, out var roles) && !string.IsNullOrEmpty(roles)
                 ? roles
                 : string.Empty;
+        }
+
+        // Determine current user's role; reuse existing service helper used elsewhere.
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var currentUserRolesMap = await UserModuleAccessService.GetRolesForUsersAsync(new[] { userId });
+                if (currentUserRolesMap.TryGetValue(userId, out var roles) && !string.IsNullOrEmpty(roles))
+                {
+                    var roleList = roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    isAdmin = roleList.Any(r => string.Equals(r, "Admin", StringComparison.OrdinalIgnoreCase));
+                }
+            }
+        }
+        catch
+        {
+            isAdmin = false;
         }
     }
 
@@ -215,6 +237,31 @@
             Modules = src.Modules.ToDictionary(kv => kv.Key, kv => kv.Value),
             Submodules = src.Submodules.ToDictionary(kv => kv.Key, kv => kv.Value)
         };
+    }
+
+    private bool CanSeeModule(Module module)
+    {
+        if (module == null) return false;
+
+        // Restrict "System Settings" visibility — adjust the name check to match your data
+        if (string.Equals(module.Name, "System Settings", StringComparison.OrdinalIgnoreCase))
+        {
+            // Show "System Settings" only when the selected user is an Admin.
+            // The page itself requires the current user to be Admin, so this ensures
+            // those settings are visible only for Admin accounts being edited.
+            return SelectedUserHasRole("Admin");
+        }
+
+        return true;
+    }
+
+    private bool SelectedUserHasRole(string role)
+    {
+        if (selectedUser == null) return false;
+        if (!userRoles.TryGetValue(selectedUser.Id, out var roles) || string.IsNullOrEmpty(roles)) return false;
+
+        var roleList = roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return roleList.Any(r => string.Equals(r, role, StringComparison.OrdinalIgnoreCase));
     }
 }
 
