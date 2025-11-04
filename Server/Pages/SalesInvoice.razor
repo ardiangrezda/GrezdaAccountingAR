@@ -40,6 +40,22 @@
         font-weight: bold;
     }
 
+    /* style for Add Article button to match totals-row */
+    .btn-add-item {
+        background-color: #E8F5E9;
+        color: #2e7d32;
+        border: 1px solid #c8e6c9;
+        box-shadow: none;
+        padding: .35rem .6rem;
+        border-radius: .25rem;
+    }
+    .btn-add-item:hover,
+    .btn-add-item:focus {
+        background-color: #c8e6c9;
+        color: #1b5e20;
+        text-decoration: none;
+    }
+
     .form-control-sm {
         padding: 0.25rem 0.5rem;
         height: calc(1.5em + 0.5rem + 2px);
@@ -153,6 +169,15 @@
         background-color: #4CAF50 !important;
         color: white !important;
     }
+
+    .no-spin::-webkit-outer-spin-button,
+    .no-spin::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spin {
+  -moz-appearance: textfield; /* hide Firefox spinner */
+}
 </style>
 
 <ErrorBoundary @ref="errorBoundary">
@@ -256,10 +281,6 @@
                                 <div class="row">
                                     <div class="col-12">
                                         <h5 class="mb-3">@invoiceItemsLabel</h5>
-                                        <button type="button" class="btn btn-success btn-sm mb-3" @onclick="AddNewItem">
-                                            <i class="fas fa-plus"></i> @addItemLabel
-                                        </button>
-                                        
                                         <div class="table-responsive">
                                             <table class="table table-bordered">
                                                 <thead>
@@ -322,11 +343,13 @@
                                                                 </td>
                                                                 <td class="text-center">@item.UnitCode</td>
                                                                 <td class="text-end">
-                                                                    <input type="number" class="form-control form-control-sm text-end"
-                                                                           @bind="item.PriceWithoutVAT"
-                                                                           @bind:event="oninput"
-                                                                           @onblur="() => CalculateItemTotal(item)"
-                                                                           readonly />
+                                                                    <input type="number" class="form-control form-control-sm text-end no-spin"
+                                                                           step="0.01" inputmode="decimal"
+                                                                           lang="@System.Globalization.CultureInfo.CurrentCulture.Name"
+                                                                           @bind="item.PriceWithoutVAT" @bind:event="oninput"
+                                                                           @onblur="() => OnPriceWithoutVatBlurAsync(item)"
+                                                                           onkeydown="if(event.key==='ArrowUp' || event.key==='ArrowDown'){event.preventDefault();}"
+                                                                           onwheel="this.blur();" />
                                                                 </td>
                                                                 <td class="text-end">
                                                                     <input type="number" class="form-control form-control-sm text-end"
@@ -341,7 +364,6 @@
                                                                                @bind="item.DiscountPercent"
                                                                                @bind:event="oninput"
                                                                                @onblur="() => CalculateItemTotal(item)" />
-                                                                        <span class="input-group-text">%</span>
                                                                     </div>
                                                                 </td>
                                                                 <td class="text-end">@item.DiscountAmount.ToString("N2")</td>
@@ -366,12 +388,21 @@
                                                 </tbody>
                                                 <tfoot>
                                                     <tr class="totals-row">
-                                                        <td colspan="7"></td>
+                                                        <!-- Button placed in the same totals row.
+                                                             Adjust the first/second colspan values if your column count changes. -->
+                                                        <td colspan="2">
+                                                            <button type="button" class="btn btn-add-item btn-sm me-2" @onclick="AddNewItem">
+                                                                <i class="fas fa-plus"></i> @addItemLabel
+                                                            </button>
+                                                        </td>
+
+                                                        <!-- keep empty cells so totals columns remain aligned -->
+                                                        <td colspan="6"></td>
+
                                                         <td class="text-end">@totalsLabel</td>
                                                         <td class="text-end">@sale.TotalDiscountAmount.ToString("N2")</td>
                                                         <td class="text-end">@sale.TotalWithoutVAT.ToString("N2")</td>
                                                         <td class="text-end">@sale.TotalWithVAT.ToString("N2")</td>
-                                                        <td></td>
                                                     </tr>
                                                 </tfoot>
                                             </table>
@@ -1191,5 +1222,40 @@
         backToSalesLabel = LocalizationService.GetString("STRING_00151", languageId) ?? "Back to Sales";
         startTypingDescriptionLabel = LocalizationService.GetString("STRING_00143", languageId) ?? "Start typing description...";
         backLabel = LocalizationService.GetString("STRING_00142", languageId) ?? "Back";
+    }
+    private async Task OnPriceWithoutVatInput(ChangeEventArgs e, SalesInvoiceItem item)
+    {
+        if (item == null) return;
+
+        // Parse user input and update PriceWithoutVAT
+        if (decimal.TryParse(e?.Value?.ToString(), out var priceExcl))
+        {
+            item.PriceWithoutVAT = Math.Round(priceExcl, 2);
+
+            // Recompute PriceWithVAT from user-entered PriceWithoutVAT and VATPercent
+            item.PriceWithVAT = Math.Round(item.PriceWithoutVAT * (1 + (item.VATPercent / 100)), 2);
+
+            // Recalculate totals (CalculateItemTotal expects PriceWithVAT to be set)
+            await CalculateItemTotal(item);
+        }
+    }
+    private async Task OnPriceWithoutVatBlurAsync(SalesInvoiceItem item)
+    {
+        item.PriceWithoutVAT = Math.Round(item.PriceWithoutVAT, 2);
+        item.PriceWithVAT = Math.Round(item.PriceWithoutVAT * (1 + (item.VATPercent / 100)), 2);
+        await CalculateItemTotal(item);
+    }
+    // Optionally, if you want users to edit PriceWithVAT as well, add similar handler:
+    private async Task OnPriceWithVatInput(ChangeEventArgs e, SalesInvoiceItem item)
+    {
+        if (item == null) return;
+
+        if (decimal.TryParse(e?.Value?.ToString(), out var priceIncl))
+        {
+            item.PriceWithVAT = Math.Round(priceIncl, 2);
+            // Keep PriceWithoutVAT consistent with PriceWithVAT
+            item.PriceWithoutVAT = Math.Round(item.PriceWithVAT / (1 + (item.VATPercent / 100)), 2);
+            await CalculateItemTotal(item);
+        }
     }
 }

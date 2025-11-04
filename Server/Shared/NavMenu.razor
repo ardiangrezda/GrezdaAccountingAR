@@ -36,13 +36,13 @@
             </div>
         }
 
-        @if (HasModuleAccess("Sales", "Shitje"))
+        @if (HasModuleAccess("Sales"))
         {
             <div class="nav-item">
-                <NavLink class="nav-link" @onclick="ToggleShitjeSubMenu">
-                    <i class="oi oi-cart" aria-hidden="true"></i><span>Shitje</span>
+                <NavLink class="nav-link" @onclick="ToggleSalesSubMenu">
+                    <i class="oi oi-cart" aria-hidden="true"></i><span>Sales</span>
                 </NavLink>
-                @if (showShitjeSubMenu)
+                @if (showSalesSubMenu)
                 {
                     <div class="submenu">
                         @foreach (var category in salesCategories.Where(IsCategoryAllowed))
@@ -159,7 +159,7 @@
     private readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(30);
 
     // existing fields (kept from your file)
-    private bool showShitjeSubMenu = false;
+    private bool showSalesSubMenu = false;
     private bool showAdminSubMenu = false;
     private List<SalesCategory> salesCategories = new();
     private int defaultLanguageId = 1;
@@ -332,35 +332,31 @@
         }
     }
 
-    private bool HasModuleAccess(params string[] candidates)
+    private bool HasModuleAccess(string candidate)
     {
         if (isAdmin) return true;
 
         // If we couldn't initialize access lists treat as no access
         if (allowedModules == null) return false;
 
-        foreach (var cand in candidates)
+        if (string.IsNullOrWhiteSpace(candidate)) return false;
+
+        // direct module name match
+        if (allowedModules.Any(m => string.Equals(m.Name, candidate, StringComparison.OrdinalIgnoreCase)))
+            return true;
+
+        // RazorPage match variants
+        if (allowedModules.Any(m =>
+            !string.IsNullOrEmpty(m.RazorPage) &&
+            (string.Equals(m.RazorPage, candidate, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(m.RazorPage, candidate + ".razor", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(m.RazorPage, "/" + candidate, StringComparison.OrdinalIgnoreCase))))
         {
-            if (string.IsNullOrWhiteSpace(cand)) continue;
-
-            // direct module name match
-            if (allowedModules.Any(m => string.Equals(m.Name, cand, StringComparison.OrdinalIgnoreCase)))
-                return true;
-
-            // RazorPage match variants
-            if (allowedModules.Any(m =>
-                !string.IsNullOrEmpty(m.RazorPage) &&
-                (string.Equals(m.RazorPage, cand, StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(m.RazorPage, cand + ".razor", StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(m.RazorPage, "/" + cand, StringComparison.OrdinalIgnoreCase))))
-            {
-                return true;
-            }
+            return true;
         }
 
-        // Sales parent: if user has sales submodules or module-level allow parent
-        if (candidates.Any(c => string.Equals(c, "Sales", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(c, "Shitje", StringComparison.OrdinalIgnoreCase)))
+        // Sales parent: candidate is a string, not a collection — check text instead of Any()
+        if (candidate.IndexOf("sales", StringComparison.OrdinalIgnoreCase) >= 0)
         {
             if (allowAllSales) return true;
             if (allowedSalesVariants.Count > 0) return true;
@@ -396,13 +392,13 @@
         }
     }
 
-    private void ToggleShitjeSubMenu()
+    private void ToggleSalesSubMenu()
     {
-        showShitjeSubMenu = !showShitjeSubMenu;
-        if (showShitjeSubMenu)
+        showSalesSubMenu = !showSalesSubMenu;
+        if (showSalesSubMenu)
             showAdminSubMenu = false;
 
-        if (showShitjeSubMenu && !NavigationManager.Uri.ToLower().Contains("/sales"))
+        if (showSalesSubMenu && !NavigationManager.Uri.ToLower().Contains("/sales"))
         {
             NavigationManager.NavigateTo("/sales");
         }
@@ -412,7 +408,7 @@
     {
         showAdminSubMenu = !showAdminSubMenu;
         if (showAdminSubMenu)
-            showShitjeSubMenu = false;
+            showSalesSubMenu = false;
         // No navigation to /admin here
     }
 
@@ -430,13 +426,13 @@
             
             if (!currentPath.Contains("/sales"))
             {
-                showShitjeSubMenu = false;
+                showSalesSubMenu = false;
                 currentCategory = null;
                 await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "currentSalesCategory");
             }
             else
             {
-                showShitjeSubMenu = true;
+                showSalesSubMenu = true;
                 
                 try
                 {
