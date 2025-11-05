@@ -18,29 +18,29 @@
     </div>
 
     <nav class="flex-column">
-        @if (HasModuleAccess("Subjects"))
+        @if (HasModuleAccess(@subjectsLabel))
         {
             <div class="nav-item">
-                <NavLink class="nav-link" href="subjects">  @* Changed from "subjektet" *@
-                    <span>Subjects</span>
+                <NavLink class="nav-link" href="subjects">
+                    <span>@subjectsLabel</span>
                 </NavLink>
             </div>
         }
 
-        @if (HasModuleAccess("Blerje"))
+        @if (HasModuleAccess(@purchasesLabel))
         {
             <div class="nav-item">
-                <NavLink class="nav-link" href="blerje">
-                    <span>Blerje</span>
+                <NavLink class="nav-link" href="purchases">
+                    <span>@purchasesLabel</span>
                 </NavLink>
             </div>
         }
 
-        @if (HasModuleAccess("Sales"))
+        @if (HasModuleAccess(@salesLabel))
         {
             <div class="nav-item">
                 <NavLink class="nav-link" @onclick="ToggleSalesSubMenu">
-                    <i class="oi oi-cart" aria-hidden="true"></i><span>Sales</span>
+                    <i class="oi oi-cart" aria-hidden="true"></i><span>@salesLabel</span>
                 </NavLink>
                 @if (showSalesSubMenu)
                 {
@@ -58,80 +58,80 @@
             </div>
         }
 
-        @if (HasModuleAccess("Levizje interne"))
+        @if (HasModuleAccess(@internalTransfersLabel))
         {
             <div class="nav-item">
-                <NavLink class="nav-link" href="levizje-interne">
-                    <span>Levizje interne</span>
+                <NavLink class="nav-link" href="internal-transfers">
+                    <span>@internalTransfersLabel</span>
                 </NavLink>
             </div>
         }
 
-        @if (HasModuleAccess("Pagesa"))
+        @if (HasModuleAccess(@paymentsLabel))
         {
             <div class="nav-item">
-                <NavLink class="nav-link" href="pagesa">
-                    <span>Pagesa</span>
+                <NavLink class="nav-link" href="payments">
+                    <span>@paymentsLabel</span>
                 </NavLink>
             </div>
         }
 
-        @if (HasModuleAccess("Kontabiliteti"))
+        @if (HasModuleAccess(@accountingLabel))
         {
             <div class="nav-item">
-                <NavLink class="nav-link" href="kontabiliteti">
-                    <span>Kontabiliteti</span>
+                <NavLink class="nav-link" href="accounting">
+                    <span>@accountingLabel</span>
                 </NavLink>
             </div>
         }
 
-        @if (isAdmin)  @* Administrimi should be visible only to Admin role per your requirement *@
+        @if (isAdmin)
         {
             <div class="nav-item">
                 <NavLink class="nav-link" @onclick="ToggleAdminSubMenu" >
-                    <i class="oi oi-person" aria-hidden="true"></i><span>Administrimi</span>
+                    <i class="oi oi-person" aria-hidden="true"></i><span>@administrationLabel</span>
                 </NavLink>
                 @if (showAdminSubMenu)
                 {
                     <div class="submenu">
                         <NavLink class="nav-link sub" href="admin/business-units">
-                            <i class="fas fa-store me-2"></i>Business Units
+                            <i class="fas fa-store me-2"></i>@businessUnitsLabel
                         </NavLink>
                         <NavLink class="nav-link sub" href="admin/user-business-units">
-                            <i class="fas fa-user-shield me-2"></i>User Access
+                            <i class="fas fa-user-shield me-2"></i>@userAccessLabel
                         </NavLink>
                         <NavLink class="nav-link sub" href="/admin/user-module-access">
-                            <i class="fas fa-layer-group me-2"></i>User Modules
+                            <i class="fas fa-layer-group me-2"></i>@userModulesLabel
                         </NavLink>
                         <NavLink class="nav-link sub" href="admin/invoice-number-settings">
-                            <i class="fas fa-hashtag me-2"></i>Invoice Number Format
+                            <i class="fas fa-hashtag me-2"></i>@invoiceNumberFormatLabel
                         </NavLink>
                         <NavLink class="nav-link sub" href="admin/users">
-                            <i class="fas fa-user me-2"></i>Users
+                            <i class="fas fa-user me-2"></i>@usersLabel
                         </NavLink>
                     </div>
                 }
             </div>
         }
 
-        @if (HasModuleAccess("Articles"))
+        @if (HasModuleAccess(@articlesLabel))
         {
             <div class="nav-item">
                 <NavLink class="nav-link" href="articles">
-                <i class="oi oi-list-rich" aria-hidden="true"></i><span>Articles</span>
+                    <i class="oi oi-list-rich" aria-hidden="true"></i><span>@articlesLabel</span>
                 </NavLink>
             </div>
         }
 
         <div class="nav-item">
             <NavLink class="nav-link sub" href="change-password">
-                <i class="fas fa-key me-2"></i>Change Password
+                <i class="fas fa-key me-2"></i>@changePasswordLabel
             </NavLink>
         </div>
 
         <div class="nav-item">
             <button @onclick="HandleLogoutAsync" class="nav-link btn btn-link logout-btn">
-                <span class="oi oi-account-logout" aria-hidden="true"></span> Logout
+                <span class="oi oi-account-logout" aria-hidden="true"></span> @logoutLabel
             </button>
         </div>
     </nav>
@@ -152,13 +152,11 @@
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, AccessCacheEntry> _accessCache
         = new();
 
-    // small lock-per-user to avoid duplicate refreshes
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, System.Threading.SemaphoreSlim> _userLocks
         = new();
 
     private readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(30);
 
-    // existing fields (kept from your file)
     private bool showSalesSubMenu = false;
     private bool showAdminSubMenu = false;
     private List<SalesCategory> salesCategories = new();
@@ -171,8 +169,29 @@
     private bool allowAllSales = false;
     private bool isAdmin = false;
 
+    // Localization strings
+    private string subjectsLabel = string.Empty;
+    private string purchasesLabel = string.Empty;
+    private string salesLabel = string.Empty;
+    private string internalTransfersLabel = string.Empty;
+    private string paymentsLabel = string.Empty;
+    private string accountingLabel = string.Empty;
+    private string administrationLabel = string.Empty;
+    private string businessUnitsLabel = string.Empty;
+    private string userAccessLabel = string.Empty;
+    private string userModulesLabel = string.Empty;
+    private string invoiceNumberFormatLabel = string.Empty;
+    private string usersLabel = string.Empty;
+    private string articlesLabel = string.Empty;
+    private string changePasswordLabel = string.Empty;
+    private string logoutLabel = string.Empty;
+    private string errorLoadingCategoryLabel = string.Empty;
+    private string errorLocationChangeLabel = string.Empty;
+    private string errorGettingCategoryLabel = string.Empty;
+
     protected override async Task OnInitializedAsync()
     {
+        await LoadLocalizationStrings();
         salesCategories = await StateContainer.GetSalesCategoriesAsync();
         await StateContainer.RefreshSalesCategoriesAsync();
         defaultLanguageId = await LocalizationService.GetDefaultLanguageId();
@@ -231,9 +250,7 @@
 
         if (entry.IsAdmin)
         {
-            // Admin sees everything; allow all sales
             entry.AllowAllSales = true;
-            // still populate Modules list minimally so HasModuleAccess checks still work
             entry.AllowedModules = await UserModuleAccessService.GetModulesAsync();
             return entry;
         }
@@ -369,7 +386,6 @@
     {
         if (allowAllSales) return true;
 
-        // Fallback: if no variant restrictions found for user, show all categories to avoid accidentally hiding everything
         if (allowedSalesVariants.Count == 0) return true;
 
         return allowedSalesVariants.Contains(category.Code);
@@ -387,7 +403,7 @@
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error loading category from session storage");
+                Logger.LogError(ex, @errorLoadingCategoryLabel);
             }
         }
     }
@@ -409,7 +425,6 @@
         showAdminSubMenu = !showAdminSubMenu;
         if (showAdminSubMenu)
             showSalesSubMenu = false;
-        // No navigation to /admin here
     }
 
     protected override void OnInitialized()
@@ -423,7 +438,7 @@
         try
         {
             var currentPath = e.Location.ToLower();
-            
+
             if (!currentPath.Contains("/sales"))
             {
                 showSalesSubMenu = false;
@@ -433,7 +448,7 @@
             else
             {
                 showSalesSubMenu = true;
-                
+
                 try
                 {
                     foreach (var category in salesCategories)
@@ -455,10 +470,10 @@
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Error getting category from session storage");
+                    Logger.LogError(ex, errorGettingCategoryLabel);
                 }
             }
-            
+
             var currentPathLower = currentPath.ToLower();
             if (!currentPathLower.Contains("/admin"))
             {
@@ -468,12 +483,12 @@
             {
                 showAdminSubMenu = true;
             }
-            
+
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error handling location change");
+            Logger.LogError(ex, errorLocationChangeLabel);
         }
     }
 
@@ -519,13 +534,37 @@
             return "";
 
         var languageId = defaultLanguageId;
-        
+
         return LocalizationService.GetString(stringKey, languageId) ?? stringKey;
     }
 
     public void Dispose()
     {
         NavigationManager.LocationChanged -= HandleLocationChanged;
+    }
+
+    private async Task LoadLocalizationStrings()
+    {
+        var languageId = await LocalizationService.GetDefaultLanguageId();
+            
+        subjectsLabel = LocalizationService.GetString("STRING_00031", languageId) ?? "Subjects";
+        purchasesLabel = LocalizationService.GetString("STRING_00173", languageId) ?? "Purchases";
+        salesLabel = LocalizationService.GetString("STRING_00174", languageId) ?? "Sales";
+        internalTransfersLabel = LocalizationService.GetString("STRING_00175", languageId) ?? "Internal Transfers";
+        paymentsLabel = LocalizationService.GetString("STRING_00176", languageId) ?? "Payments";
+        accountingLabel = LocalizationService.GetString("STRING_00177", languageId) ?? "Accounting";
+        administrationLabel = LocalizationService.GetString("STRING_00178", languageId) ?? "Administration";
+        businessUnitsLabel = LocalizationService.GetString("STRING_00179", languageId) ?? "Business Units";
+        userAccessLabel = LocalizationService.GetString("STRING_00180", languageId) ?? "User Access";
+        userModulesLabel = LocalizationService.GetString("STRING_00181", languageId) ?? "User Modules";
+        invoiceNumberFormatLabel = LocalizationService.GetString("STRING_00182", languageId) ?? "Invoice Number Format";
+        usersLabel = LocalizationService.GetString("STRING_00183", languageId) ?? "Users";
+        articlesLabel = LocalizationService.GetString("STRING_00184", languageId) ?? "Articles";
+        changePasswordLabel = LocalizationService.GetString("STRING_00185", languageId) ?? "Change Password";
+        logoutLabel = LocalizationService.GetString("STRING_00186", languageId) ?? "Logout";
+        errorLoadingCategoryLabel = LocalizationService.GetString("STRING_00187", languageId) ?? "Error loading current sales category from session storage.";
+        errorLocationChangeLabel = LocalizationService.GetString("STRING_00188", languageId) ?? "Error changing location change";
+        errorGettingCategoryLabel = LocalizationService.GetString("STRING_00189", languageId) ?? "Error getting sales category from session storage";
     }
 }
 
