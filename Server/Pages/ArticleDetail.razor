@@ -16,7 +16,7 @@
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb">
                         <li class="breadcrumb-item">
-                            <a href="/articles">Articles</a>
+                            <a href="/articles">@articlesLabel</a>
                         </li>
                         <li class="breadcrumb-item active">@article.Code</li>
                     </ol>
@@ -28,14 +28,14 @@
                         <div>
                             @if (article.IsActive)
                             {
-                                <span class="badge bg-success me-2">Active</span>
+                                <span class="badge bg-success me-2">@activeLabel</span>
                             }
                             else
                             {
-                                <span class="badge bg-secondary me-2">Inactive</span>
+                                <span class="badge bg-secondary me-2">@inactiveLabel</span>
                             }
                             <button class="btn btn-primary btn-sm" @onclick="EditArticle">
-                                <i class="fas fa-edit"></i> Edit
+                                <i class="fas fa-edit"></i> @editLabel
                             </button>
                         </div>
                     </div>
@@ -103,7 +103,7 @@
                                             </span>
                                             @if (article.StockQuantity <= 10)
                                             {
-                                                <span class="badge bg-warning ms-2">Low Stock</span>
+                                                <span class="badge bg-warning ms-2">@lowStockLabel</span>
                                             }
                                         </td>
                                     </tr>
@@ -148,7 +148,7 @@
                                                             string.IsNullOrWhiteSpace(article.Description2) &&
                                                             string.IsNullOrWhiteSpace(article.Description3))
                                 {
-                                    <p class="text-muted">No descriptions available.</p>
+                                    <p class="text-muted">@noDescriptionAvailLabel</p>
                                 }
                             </div>
                         </div>
@@ -159,8 +159,8 @@
                             <div class="row mt-4">
                                 <div class="col-12">
                                     <div class="alert alert-warning">
-                                        <h5><i class="fas fa-exclamation-triangle"></i> Low Stock Alert</h5>
-                                        <p>This article has low stock quantity (@article.StockQuantity @article.Unit?.Code). Consider reordering.</p>
+                                        <h5><i class="fas fa-exclamation-triangle"></i> @lowStockAlertLabel</h5>
+                                        <p>@articleLowStockLabel (@article.StockQuantity @article.Unit?.Code). </p>
                                     </div>
                                 </div>
                             </div>
@@ -169,17 +169,17 @@
                     <div class="card-footer">
                         <div class="d-flex justify-content-between">
                             <button class="btn btn-secondary" @onclick="GoBack">
-                                <i class="fas fa-arrow-left"></i> Back to Articles
+                                <i class="fas fa-arrow-left"></i> @backToArticlesLabel
                             </button>
                             <div>
                                 @if (!article.IsActive)
                                 {
                                     <button class="btn btn-success me-2" @onclick="RestoreArticle">
-                                        <i class="fas fa-undo"></i> Restore Article
+                                        <i class="fas fa-undo"></i> @restoreArticleLabel
                                     </button>
                                 }
                                 <button class="btn btn-primary" @onclick="EditArticle">
-                                    <i class="fas fa-edit"></i> Edit Article
+                                    <i class="fas fa-edit"></i> @editArticleLabel
                                 </button>
                             </div>
                         </div>
@@ -200,9 +200,9 @@ else if (loading)
 else
 {
     <div class="alert alert-warning">
-        <h4>Article Not Found</h4>
-        <p>The article you're looking for doesn't exist or has been removed.</p>
-        <a href="/articles" class="btn btn-primary">Back to Articles</a>
+        <h4>@articleNotFoundLabel</h4>
+        <p>@articleDoesNotExistLabel</p>
+        <a href="/articles" class="btn btn-primary">@backToArticlesLabel</a>
     </div>
 }
 
@@ -228,8 +228,29 @@ else
     private string basicInfoLabel = string.Empty;
     private string pricingInventoryLabel = string.Empty;
     private string descriptionsLabel = string.Empty;
+    private string articlesLabel = string.Empty;
+    private string activeLabel = string.Empty;
+    private string inactiveLabel = string.Empty;
+    private string lowStockLabel = string.Empty;
+    private string noDescriptionAvailLabel = string.Empty;
+    private string lowStockAlertLabel = string.Empty;
+    private string articleLowStockLabel = string.Empty;
+    private string backToArticlesLabel = string.Empty;
+    private string restoreArticleLabel = string.Empty;
+    private string editArticleLabel = string.Empty;
+    private string articleNotFoundLabel = string.Empty;
+    private string articleDoesNotExistLabel = string.Empty;
+    private string editLabel = string.Empty;
 
     protected override async Task OnInitializedAsync()
+    {
+        await LoadLocalizationStrings();
+
+        article = await ArticleService.GetArticleByIdAsync(Id);
+        loading = false;
+    }
+
+    private async Task LoadLocalizationStrings()
     {
         var languageId = await LocalizationService.GetDefaultLanguageId();
 
@@ -247,9 +268,19 @@ else
         stockValueWithVatLabel = LocalizationService.GetString("STRING_00069", languageId) ?? "Stock Value with VAT";
         pricingInventoryLabel = LocalizationService.GetString("STRING_00070", languageId) ?? "Pricing & Inventory";
         descriptionsLabel = LocalizationService.GetString("STRING_00071", languageId) ?? "Descriptions";
-
-        article = await ArticleService.GetArticleByIdAsync(Id);
-        loading = false;
+        articlesLabel = LocalizationService.GetString("STRING_00184", languageId) ?? "Articles";
+        activeLabel = LocalizationService.GetString("STRING_00019", languageId) ?? "Active";
+        inactiveLabel = LocalizationService.GetString("STRING_00020", languageId) ?? "Inactive";
+        lowStockLabel = LocalizationService.GetString("STRING_00008", languageId) ?? "Low Stock";
+        noDescriptionAvailLabel = LocalizationService.GetString("STRING_00198", languageId) ?? "No description available.";
+        lowStockAlertLabel = LocalizationService.GetString("STRING_00199", languageId) ?? "Low Stock Alert";
+        articleLowStockLabel = LocalizationService.GetString("STRING_00200", languageId) ?? "This article has low stock quantity";
+        backToArticlesLabel = LocalizationService.GetString("STRING_00201", languageId) ?? "Back to Articles";
+        restoreArticleLabel = LocalizationService.GetString("STRING_00202", languageId) ?? "Restore Article";
+        editArticleLabel = LocalizationService.GetString("STRING_00027", languageId) ?? "Edit Article";
+        articleNotFoundLabel = LocalizationService.GetString("STRING_00203", languageId) ?? "Article Not Found";
+        articleDoesNotExistLabel = LocalizationService.GetString("STRING_00204", languageId) ?? "The article you are looking for does not exist or has been removed.";
+        editLabel = LocalizationService.GetString("STRING_00021", languageId) ?? "Edit";
     }
 
     private void GoBack()

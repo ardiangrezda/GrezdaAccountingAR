@@ -15,6 +15,7 @@
 <div class="sidebar">
     <div class="nav-header">
         <h4>Accounting System</h4>
+        <p>@userName</p>
     </div>
 
     <nav class="flex-column">
@@ -131,7 +132,7 @@
 
         <div class="nav-item">
             <button @onclick="HandleLogoutAsync" class="nav-link btn btn-link logout-btn">
-                <span class="oi oi-account-logout" aria-hidden="true"></span> @logoutLabel
+                <span class="oi oi-account-logout" aria-hidden="true"></span>@logoutLabel
             </button>
         </div>
     </nav>
@@ -189,6 +190,8 @@
     private string errorLocationChangeLabel = string.Empty;
     private string errorGettingCategoryLabel = string.Empty;
 
+    private string userName = string.Empty;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadLocalizationStrings();
@@ -222,6 +225,17 @@
         finally
         {
             lockForUser.Release();
+        }
+
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userName = user.Identity.Name ?? "Unknown User";
+        }
+        else
+        {
+            userName = "Guest";
         }
     }
 

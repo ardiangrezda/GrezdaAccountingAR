@@ -4,13 +4,14 @@
 @inject BusinessUnitService businessUnitService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@inject ILocalizationService LocalizationService
 @attribute [Authorize(Roles = "Admin")]
 
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Business Units</h1>
+        <h1>@businessUnitsLabel</h1>
         <button class="btn btn-success" @onclick="CreateNew">
-            <i class="fas fa-plus"></i> New Business Unit
+            <i class="fas fa-plus"></i>@newBusinessUnitLabel
         </button>
     </div>
 
@@ -28,12 +29,12 @@
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th>Code</th>
-                                <th>Name</th>
-                                <th>Description</th>
-                                <th>Address</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <th>@codeLabel</th>
+                                <th>@nameLabel</th>
+                                <th>@descriptionLabel</th>
+                                <th>@addressLabel</th>
+                                <th>@statusLabel</th>
+                                <th>@actionsLabel</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -47,11 +48,11 @@
                                     <td>
                                         @if (unit.IsActive)
                                         {
-                                            <span class="badge bg-success">Active</span>
+                                            <span class="badge bg-success">@activeLabel</span>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-danger">Inactive</span>
+                                            <span class="badge bg-danger">@inactiveLabel</span>
                                         }
                                     </td>
                                     <td>
@@ -74,10 +75,39 @@
 
 @code {
     private List<BusinessUnit>? businessUnits;
+    private string newBusinessUnitLabel = string.Empty;
+    private string businessUnitsLabel = string.Empty;
+    private string codeLabel = string.Empty;
+    private string nameLabel = string.Empty;
+    private string descriptionLabel = string.Empty;
+    private string addressLabel = string.Empty;
+    private string statusLabel = string.Empty;
+    private string actionsLabel = string.Empty;
+    private string activeLabel = string.Empty;
+    private string inactiveLabel = string.Empty;
+    private string areYouSureDeleteBULabel = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadLocalizationStrings();
         await LoadBusinessUnits();
+    }
+
+    private async Task LoadLocalizationStrings()
+    {
+        var languageId = await LocalizationService.GetDefaultLanguageId();
+
+        newBusinessUnitLabel = LocalizationService.GetString("STRING_00196", languageId) ?? "New Business Unit";
+        businessUnitsLabel = LocalizationService.GetString("STRING_00179", languageId) ?? "Business Units";
+        codeLabel = LocalizationService.GetString("STRING_00033", languageId) ?? "Code";
+        nameLabel = LocalizationService.GetString("STRING_00011", languageId) ?? "Name";
+        descriptionLabel = LocalizationService.GetString("STRING_00028", languageId) ?? "Description";
+        addressLabel = LocalizationService.GetString("STRING_00047", languageId) ?? "Address";
+        statusLabel = LocalizationService.GetString("STRING_00038", languageId) ?? "Status";
+        actionsLabel = LocalizationService.GetString("STRING_00039", languageId) ?? "Actions";
+        activeLabel = LocalizationService.GetString("STRING_00019", languageId) ?? "Active";
+        inactiveLabel = LocalizationService.GetString("STRING_00020", languageId) ?? "Inactive";
+        areYouSureDeleteBULabel = LocalizationService.GetString("STRING_00197", languageId) ?? "Are you sure you want to delete this business unit?";
     }
 
     private async Task LoadBusinessUnits()
@@ -97,7 +127,7 @@
 
     private async Task Delete(int id)
     {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this business unit?"))
+        if (await JSRuntime.InvokeAsync<bool>("confirm", areYouSureDeleteBULabel))
         {
             await businessUnitService.DeleteAsync(id);
             await LoadBusinessUnits();
