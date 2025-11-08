@@ -167,8 +167,8 @@
     private bool showInactive = false;
 
     private string pageTitle = string.Empty;
-    private string newSubjectText = "New Subject";
-    private string searchButtonText = "Search";
+    private string newSubjectText = string.Empty;
+    private string searchButtonText = string.Empty;
     private string basicInfoHeader = string.Empty;
     private string contactInfoHeader = string.Empty;
     private string subjectTypesHeader = string.Empty;
@@ -203,8 +203,8 @@
 
         var languageId = await LocalizationService.GetDefaultLanguageId();
 
-        pageTitle = LocalizationService.GetString("STRING_00098", languageId) ?? "Subjects";
-        newSubjectText = LocalizationService.GetString("STRING_00100", languageId) ?? "New Subject";
+        pageTitle = LocalizationService.GetString("STRING_00031", languageId) ?? "Subjects";
+        newSubjectText = LocalizationService.GetString("STRING_00040", languageId) ?? "New Subject";
         searchButtonText = LocalizationService.GetString("STRING_00004", languageId) ?? "Search";
 
         codeHeader = LocalizationService.GetString("STRING_00033", languageId) ?? "Code";
