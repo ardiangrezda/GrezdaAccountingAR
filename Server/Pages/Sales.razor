@@ -124,12 +124,28 @@
     protected override async Task OnParametersSetAsync()
     {
         await GetCurrentUserAndBusinessUnit();
-        
-        // Determine category id and page title (keeps previous logic)
-        await SetCategoryId();
 
-        // Permission enforcement for sales variants
-        // Map incoming Category param to the variant code used in Submodule.VariantCode (e.g. "DOM", "DEL")
+        // Check if user is admin first
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var isAdmin = user.IsInRole("Admin");
+
+        // If admin and no category specified, redirect to domestic
+        if (isAdmin && string.IsNullOrEmpty(Category))
+        {
+            Navigation.NavigateTo("/sales/domestic", false);
+            return;
+        }
+
+        // For admin users, skip permission checks
+        if (isAdmin)
+        {
+            await SetCategoryId();
+            await LoadSales();
+            return;
+        }
+
+        // Permission enforcement for non-admin users
         string? requestedVariant = null;
         if (!string.IsNullOrEmpty(Category))
         {
@@ -162,7 +178,6 @@
             var allowed = await UserModuleAccessService.HasAccessToPageAsync(currentUserId ?? "", "Sales.razor", requestedVariant);
             if (!allowed)
             {
-                // not allowed -> redirect to forbidden
                 Navigation.NavigateTo("/forbidden");
                 return;
             }
@@ -220,6 +235,7 @@
             }
         }
 
+        await SetCategoryId();
         await LoadSales();
     }
 

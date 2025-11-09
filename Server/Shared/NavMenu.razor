@@ -19,7 +19,7 @@
     </div>
 
     <nav class="flex-column">
-        @if (HasModuleAccess(@subjectsLabel))
+        @if (HasModuleAccess("Subjects", subjectsLabel))
         {
             <div class="nav-item">
                 <NavLink class="nav-link" href="subjects">
@@ -28,7 +28,7 @@
             </div>
         }
 
-        @if (HasModuleAccess(@purchasesLabel))
+        @if (HasModuleAccess("Purchases", purchasesLabel))
         {
             <div class="nav-item">
                 <NavLink class="nav-link" href="purchases">
@@ -37,7 +37,7 @@
             </div>
         }
 
-        @if (HasModuleAccess(@salesLabel))
+        @if (HasModuleAccess("Sales", salesLabel))
         {
             <div class="nav-item">
                 <NavLink class="nav-link" @onclick="ToggleSalesSubMenu">
@@ -59,7 +59,7 @@
             </div>
         }
 
-        @if (HasModuleAccess(@internalTransfersLabel))
+        @if (HasModuleAccess("Internal Transfers", internalTransfersLabel))
         {
             <div class="nav-item">
                 <NavLink class="nav-link" href="internal-transfers">
@@ -68,7 +68,7 @@
             </div>
         }
 
-        @if (HasModuleAccess(@paymentsLabel))
+        @if (HasModuleAccess("Payments", paymentsLabel))
         {
             <div class="nav-item">
                 <NavLink class="nav-link" href="payments">
@@ -77,7 +77,7 @@
             </div>
         }
 
-        @if (HasModuleAccess(@accountingLabel))
+        @if (HasModuleAccess("Accounting", accountingLabel))
         {
             <div class="nav-item">
                 <NavLink class="nav-link" href="accounting">
@@ -115,7 +115,7 @@
             </div>
         }
 
-        @if (HasModuleAccess(@articlesLabel))
+        @if (HasModuleAccess("Articles", articlesLabel))
         {
             <div class="nav-item">
                 <NavLink class="nav-link" href="articles">
@@ -363,34 +363,37 @@
         }
     }
 
-    private bool HasModuleAccess(string candidate)
+    private bool HasModuleAccess(params string[] candidates)
     {
         if (isAdmin) return true;
 
         // If we couldn't initialize access lists treat as no access
         if (allowedModules == null) return false;
 
-        if (string.IsNullOrWhiteSpace(candidate)) return false;
-
-        // direct module name match
-        if (allowedModules.Any(m => string.Equals(m.Name, candidate, StringComparison.OrdinalIgnoreCase)))
-            return true;
-
-        // RazorPage match variants
-        if (allowedModules.Any(m =>
-            !string.IsNullOrEmpty(m.RazorPage) &&
-            (string.Equals(m.RazorPage, candidate, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(m.RazorPage, candidate + ".razor", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(m.RazorPage, "/" + candidate, StringComparison.OrdinalIgnoreCase))))
+        foreach (var candidate in candidates)
         {
-            return true;
-        }
+            if (string.IsNullOrWhiteSpace(candidate)) continue;
 
-        // Sales parent: candidate is a string, not a collection — check text instead of Any()
-        if (candidate.IndexOf("sales", StringComparison.OrdinalIgnoreCase) >= 0)
-        {
-            if (allowAllSales) return true;
-            if (allowedSalesVariants.Count > 0) return true;
+            // direct module name match
+            if (allowedModules.Any(m => string.Equals(m.Name, candidate, StringComparison.OrdinalIgnoreCase)))
+                return true;
+
+            // RazorPage match variants
+            if (allowedModules.Any(m =>
+                !string.IsNullOrEmpty(m.RazorPage) &&
+                (string.Equals(m.RazorPage, candidate, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(m.RazorPage, candidate + ".razor", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(m.RazorPage, "/" + candidate, StringComparison.OrdinalIgnoreCase))))
+            {
+                return true;
+            }
+
+            // Sales parent: candidate is a string, not a collection — check text instead of Any()
+            if (candidate.IndexOf("sales", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                if (allowAllSales) return true;
+                if (allowedSalesVariants.Count > 0) return true;
+            }
         }
 
         return false;
