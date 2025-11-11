@@ -3,56 +3,158 @@
 <PageTitle>Accounting System</PageTitle>
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
-    <main>
-        <div class="content">
+    <NavMenu />
+    <main class="main">
+        <div class="page-content">
             @Body
         </div>
     </main>
 </div>
 
 <style>
-    /* These styles make sure the layout works correctly with the NavMenu */
-    .page {
-        display: flex;
-        flex-direction: row;
-        height: 100vh;
+    .page-content h1,
+    .container-fluid h1,
+    .page-content h1.me-4,
+    .container-fluid h1.me-4,
+    h1.me-4,
+    h1 {
+        font-size: 1.1rem !important;
+        margin-top: 0 !important;
+        margin-bottom: 1rem !important;
+        padding-top: 0 !important;
+        font-weight: 600 !important;
+        line-height: 1.2 !important;
     }
-    
-    main {
-        flex: 1;
-        overflow-y: auto;
-        margin-left: 280px;
-        padding: 1rem;
-    }
-    
-    .content {
-        width: 100%;
-        max-width: 100%;
-    }
-    
-    .sidebar {
-        width: 280px;
-        position: fixed;
-        height: 100vh;
-        left: 0;
-        top: 0;
-    }
-    
-    @@media (max-width: 640.98px) {
-        .sidebar {
-            position: fixed;
-            z-index: 999;
-            width: 100%;
-            height: auto;
+
+    @@media (min-width: 576px) {
+        .page-content h1,
+        .container-fluid h1,
+        h1 {
+            font-size: 1.1rem !important;
         }
-        
-        main {
-            margin-left: 0 !important;
-            margin-top: 60px;
+    }
+
+    @@media (min-width: 768px) {
+        .page-content h1,
+        .container-fluid h1,
+        h1 {
+            font-size: 1.1rem !important;
+        }
+    }
+
+    @@media (min-width: 992px) {
+        .page-content h1,
+        .container-fluid h1,
+        h1 {
+            font-size: 1.1rem !important;
+        }
+    }
+
+    @@media (min-width: 1200px) {
+        .page-content h1,
+        .container-fluid h1,
+        h1 {
+            font-size: 1.1rem !important;
+        }
+    }
+
+    @@media (min-width: 1400px) {
+        .page-content h1,
+        .container-fluid h1,
+        h1 {
+            font-size: 1.1rem !important;
+        }
+    }
+
+    .page-content,
+    .page-content *,
+    .container-fluid,
+    .container-fluid * {
+        font-size: 0.8rem !important;
+    }
+
+    .page-content table,
+    .page-content .table,
+    .container-fluid table,
+    .container-fluid .table,
+    table,
+    .table {
+        font-size: 0.8rem !important;
+    }
+
+    .page-content table th,
+    .page-content .table th,
+    .container-fluid table th,
+    .container-fluid .table th,
+    table th,
+    .table th {
+        font-size: 0.8rem !important;
+    }
+
+    .page-content table td,
+    .page-content .table td,
+    .container-fluid table td,
+    .container-fluid .table td,
+    table td,
+    .table td {
+        font-size: 0.8rem !important;
+    }
+
+    .page-content .form-control,
+    .container-fluid .form-control,
+    .form-control,
+    input,
+    select,
+    textarea {
+        font-size: 0.8rem !important;
+    }
+
+    .page-content .btn,
+    .container-fluid .btn,
+    .btn,
+    button {
+        font-size: 0.8rem !important;
+        padding: 0.4rem 0.8rem !important;
+    }
+
+    .page-content .badge,
+    .container-fluid .badge,
+    .badge {
+        font-size: 0.75rem !important;
+    }
+
+    .page-content {
+        padding-top: 70px;
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-bottom: 20px;
+    }
+
+    .page-content h1,
+    .container-fluid h1 {
+        margin-top: 0;
+        padding-top: 0;
+        margin-bottom: 1rem;
+        display: block;
+        visibility: visible;
+    }
+
+    .container-fluid {
+        padding-top: 0;
+        margin-top: 0;
+    }
+
+    @@media (max-width: 640.98px) {
+        .main {
+            margin-left: 0;
+            margin-top: 0;
+        }
+    }
+
+    @@media (min-width: 641px) {
+        .page {
+            flex-direction: row;
         }
     }
 </style>
+

@@ -45,16 +45,11 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 // Blazor
 builder.Services.AddRazorPages();
-builder.Services.AddServerSideBlazor(options =>
-{
-    options.DetailedErrors = true;
-})
-.AddHubOptions(options =>
-{
-    options.MaximumReceiveMessageSize = 32 * 1024 * 1024; // 32MB
-    options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
-    options.HandshakeTimeout = TimeSpan.FromSeconds(15);
-});
+builder.Services.AddServerSideBlazor()
+    .AddHubOptions(options =>
+    {
+        options.MaximumReceiveMessageSize = 32 * 1024 * 1024; // 32MB
+    });
 
 builder.Services.Configure<CircuitOptions>(options =>
 {
