@@ -20,7 +20,7 @@
     <div class="container-fluid px-4">
         <div class="row">
             <div class="col-12">
-                <nav aria-label="breadcrumb">
+                <nav aria-label="breadcrumb" class="no-print">
                     <ol class="breadcrumb">
                         <li class="breadcrumb-item">
                             <a href="/sales">Sales</a>
@@ -30,7 +30,7 @@
                 </nav>
 
                 <div class="card shadow-sm">
-                    <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="card-header d-flex justify-content-between align-items-center no-print">
                         <h3 class="mb-0">@invoiceNumberLabel: @invoice.InvoiceNumber</h3>
                         <div>
                             @if (invoice.IsCancelled)
@@ -54,7 +54,17 @@
                             }
                         </div>
                     </div>
-                    <div class="card-body">
+                    
+                    <!-- This is the printable content -->
+                    <div class="card-body" id="printable-invoice">
+                        <!-- Print Header - Only visible when printing -->
+                        <div class="print-only">
+                            <div class="text-center mb-4">
+                                <h2>INVOICE</h2>
+                                <h4>@invoiceNumberLabel: @invoice.InvoiceNumber</h4>
+                            </div>
+                        </div>
+
                         <div class="row mb-4">
                             <div class="col-md-6">
                                 <h5 class="border-bottom pb-2">@invoiceSummaryLabel</h5>
@@ -148,11 +158,11 @@
                                                 <td>@item.Description</td>
                                                 <td class="text-end">@item.Quantity.ToString("F2")</td>
                                                 <td class="text-center">@item.UnitCode</td>
-                                                <td class="text-end">@item.PriceWithoutVAT.ToString("F2") @item.CurrencyCode</td>
+                                                <td class="text-end">@item.PriceWithoutVAT.ToString("F2")</td>
                                                 <td class="text-end">@item.DiscountPercent.ToString("F2")%</td>
                                                 <td class="text-end">@item.VATPercent.ToString("F2")%</td>
-                                                <td class="text-end">@item.ValueWithoutVAT.ToString("F2") @item.CurrencyCode</td>
-                                                <td class="text-end">@item.ValueWithVAT.ToString("F2") @item.CurrencyCode</td>
+                                                <td class="text-end">@item.ValueWithoutVAT.ToString("F2")</td>
+                                                <td class="text-end">@item.ValueWithVAT.ToString("F2")</td>
                                             </tr>
                                         }
                                     }
@@ -195,7 +205,7 @@
                                         <div class="bg-success text-white p-3 rounded">
                                             <div class="d-flex justify-content-between">
                                                 <span class="h5 mb-0">@totalDueLabel:</span>
-                                                <span class="h5 mb-0">@invoice.TotalWithVAT.ToString("F2")</span>
+                                                <span class="h5 mb-0">@invoice.TotalWithVAT.ToString("F2") @(invoice.Items?.FirstOrDefault()?.CurrencyCode ?? "EUR")</span>
                                             </div>
                                         </div>
                                     </div>
@@ -203,7 +213,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card-footer">
+                    
+                    <div class="card-footer no-print">
                         <div class="d-flex justify-content-between">
                             <button class="btn btn-secondary" @onclick="GoBack">
                                 <i class="fas fa-arrow-left"></i> @backToSalesLabel
@@ -213,7 +224,6 @@
                                 {
                                     <button class="btn btn-success me-2" @onclick="PostInvoice">
                                         <i class="fas fa-check-circle"></i> @postInvoiceLabel
-
                                     </button>
                                     <button class="btn btn-danger me-2" @onclick="CancelInvoice">
                                         <i class="fas fa-times-circle"></i> @cancelLabel
@@ -249,6 +259,208 @@ else
         <a href="/sales" class="btn btn-primary">@backToSalesLabel</a>
     </div>
 }
+
+<!-- Print Styles -->
+<style>
+    @@media print {
+        /* Reset everything for print */
+        * {
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+        }
+        
+        /* Hide everything by default */
+        body * {
+            visibility: hidden;
+        }
+        
+        /* Force body and html to use full page */
+        html, body {
+            height: auto !important;
+            width: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+        }
+        
+        /* Hide navigation, sidebar, and other UI elements */
+        .no-print,
+        .no-print *,
+        nav,
+        .navbar,
+        .sidebar,
+        .breadcrumb,
+        .card-header,
+        .card-footer,
+        .btn,
+        button {
+            display: none !important;
+            visibility: hidden !important;
+        }
+        
+        /* Show only the printable content */
+        #printable-invoice,
+        #printable-invoice * {
+            visibility: visible !important;
+        }
+        
+        /* Position the printable content at the very top */
+        #printable-invoice {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            background: white !important;
+            padding: 15px !important;
+            margin: 0 !important;
+            transform: none !important;
+        }
+        
+        /* Override any Bootstrap/layout containers */
+        .container-fluid,
+        .container,
+        .row,
+        .col-12,
+        .col-md-6,
+        .card,
+        .card-body {
+            all: unset !important;
+            display: block !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+        }
+        
+        /* Fix table responsiveness - remove scrolling */
+        .table-responsive {
+            overflow: visible !important;
+            width: 100% !important;
+            display: block !important;
+        }
+        
+        /* Optimize table for print */
+        .table {
+            width: 100% !important;
+            font-size: 10px !important;
+            margin-bottom: 15px !important;
+            border-collapse: collapse !important;
+            overflow: visible !important;
+        }
+        
+        .table th,
+        .table td {
+            padding: 4px 2px !important;
+            font-size: 9px !important;
+            border: 1px solid #dee2e6 !important;
+            word-wrap: break-word !important;
+            overflow: visible !important;
+        }
+        
+        .table th {
+            background-color: #f8f9fa !important;
+            font-weight: bold !important;
+            -webkit-print-color-adjust: exact !important;
+        }
+        
+        /* Ensure page breaks work properly */
+        .table,
+        .card {
+            page-break-inside: auto !important;
+        }
+        
+        /* Show print-only elements */
+        .print-only {
+            display: block !important;
+            visibility: visible !important;
+        }
+        
+        /* Print header styling */
+        .print-only h2 {
+            font-size: 18px !important;
+            margin-bottom: 5px !important;
+            text-align: center !important;
+        }
+        
+        .print-only h4 {
+            font-size: 14px !important;
+            margin-bottom: 15px !important;
+            text-align: center !important;
+        }
+        
+        /* Section headers */
+        h5 {
+            font-size: 12px !important;
+            margin-bottom: 8px !important;
+            margin-top: 10px !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            padding-bottom: 2px !important;
+        }
+        
+        /* Summary cards */
+        .card-header {
+            display: block !important;
+            background-color: #343a40 !important;
+            color: white !important;
+            padding: 8px !important;
+            -webkit-print-color-adjust: exact !important;
+        }
+        
+        .bg-success {
+            background-color: #198754 !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact !important;
+            padding: 8px !important;
+            border-radius: 4px !important;
+        }
+        
+        /* Two-column layout for invoice info */
+        .row {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            margin-bottom: 10px !important;
+        }
+        
+        .col-md-6 {
+            flex: 0 0 48% !important;
+            max-width: 48% !important;
+            margin-right: 2% !important;
+            display: inline-block !important;
+        }
+        
+        .offset-md-6 {
+            margin-left: 50% !important;
+        }
+        
+        /* Remove Bootstrap margins and padding globally for print */
+        .mb-2, .mb-3, .mb-4, .me-2, .ms-2 {
+            margin: 0 !important;
+        }
+        
+        /* Text alignment */
+        .text-end {
+            text-align: right !important;
+        }
+        
+        .text-center {
+            text-align: center !important;
+        }
+        
+        /* Make sure content fits on page - FIXED LINE */
+        @@page {
+            margin: 0.5in !important;
+            size: A4 !important;
+        }
+    }
+    
+    /* Hide print-only elements on screen */
+    .print-only {
+        display: none;
+    }
+</style>
 
 @code {
     [Parameter] public int Id { get; set; }
