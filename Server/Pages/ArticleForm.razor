@@ -7,12 +7,12 @@
 @inject ILocalizationService LocalizationService
 @attribute [Authorize]
 
-<PageTitle>@(IsEdit ? "Edit Article" : "Create Article")</PageTitle>
+<PageTitle>@(IsEdit ? editArticleLabel : @createArticleLabel)</PageTitle>
 
 <div class="container">
     <div class="row">
         <div class="col-12">
-            <h2>@(IsEdit ? "Edit Article" : "Create New Article")</h2>
+            <h1>@(IsEdit? @editArticleLabel : @createArticleLabel)</h1>
 
             <div class="card">
                 <div class="card-body">
@@ -163,6 +163,8 @@
     private string vatTypeLabel = string.Empty;
     private string stockQuantityLabel = string.Empty;
     private string activeLabel = string.Empty;
+    private string createArticleLabel = string.Empty;
+    private string editArticleLabel = string.Empty;
 
     private bool IsEdit => Id.HasValue;
 
@@ -182,6 +184,8 @@
         vatTypeLabel = LocalizationService.GetString("STRING_00064", languageId) ?? "VAT Type";
         stockQuantityLabel = LocalizationService.GetString("STRING_00067", languageId) ?? "Stock Quantity";
         activeLabel = LocalizationService.GetString("STRING_00075", languageId) ?? "Active";
+        createArticleLabel = LocalizationService.GetString("STRING_00026", languageId) ?? "Create Article";
+        editArticleLabel = LocalizationService.GetString("STRING_00027", languageId) ?? "Edit Article";
 
         await LoadUnits();
         await LoadCurrencies();

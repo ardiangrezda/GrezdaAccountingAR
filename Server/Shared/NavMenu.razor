@@ -104,7 +104,6 @@
                 </div>
             }
 
-
             @if (isAdmin)
             {
                 <div class="nav-item">
@@ -191,7 +190,7 @@
 
     private string userName = string.Empty;
     private string currentBusinessUnitName = string.Empty;
-    private string applicationTitle = "Accounting System";
+    private string applicationTitle = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -591,6 +590,7 @@
         errorLoadingCategoryLabel = LocalizationService.GetString("STRING_00187", languageId) ?? "Error loading current sales category from session storage.";
         errorLocationChangeLabel = LocalizationService.GetString("STRING_00188", languageId) ?? "Error changing location change";
         errorGettingCategoryLabel = LocalizationService.GetString("STRING_00189", languageId) ?? "Error getting sales category from session storage";
+        applicationTitle = LocalizationService.GetString("STRING_00205", languageId) ?? "Accounting System";
     }
     private void HandleChangePasswordAsync()
     {
