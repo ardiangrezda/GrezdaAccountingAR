@@ -178,6 +178,102 @@
 .no-spin {
   -moz-appearance: textfield; /* hide Firefox spinner */
 }
+
+/* Cash Payment Modal Styles - Compact Version */
+.cash-payment-modal {
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    max-width: 280px;
+    width: 85%;
+    margin: 0 auto;
+}
+
+.cash-payment-header {
+    background: linear-gradient(45deg, #4CAF50, #45a049);
+    color: white;
+    border-radius: 12px 12px 0 0;
+    padding: 0.75rem 1rem;
+    text-align: center;
+}
+
+.cash-payment-header h4 {
+    font-size: 1rem;
+    margin-bottom: 0;
+}
+
+.cash-modal-body {
+    padding: 1.5rem 1rem;
+    background-color: white;
+}
+
+.cash-payment-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.8rem;
+    gap: 0.5rem;
+    padding-left: 40px; /* Add whitespace before the entire row */
+}
+
+.cash-payment-label {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+    min-width: 60px; /* Increased from 50px to 60px for the label */
+    text-align: right;
+    margin-bottom: 0;
+}
+
+.cash-payment-input {
+    width: 100px; /* Reduced from 120px to make it smaller */
+    padding: 0.5rem;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 1rem;
+    text-align: center;
+    background-color: white;
+    transition: border-color 0.2s;
+}
+
+.cash-payment-input:focus {
+    border-color: #4CAF50;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+.cash-payment-input[readonly] {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    color: #6c757d;
+}
+
+.cash-change-positive {
+    color: #28a745;
+    font-weight: bold;
+    background-color: #d4edda;
+}
+
+.cash-change-negative {
+    color: #dc3545;
+    font-weight: bold;
+    background-color: #f8d7da;
+}
+
+.cash-modal-buttons {
+    padding: 1rem; /* Reduced padding */
+    border-top: 1px solid #dee2e6;
+    background-color: white;
+    border-radius: 0 0 12px 12px;
+    text-align: center;
+    gap: 0.5rem;
+    display: flex;
+    justify-content: center;
+}
+
+.cash-modal-buttons .btn {
+    font-size: 0.9rem; /* Smaller button text */
+    padding: 0.5rem 1rem; /* Smaller button padding */
+}
 </style>
 
 <ErrorBoundary @ref="errorBoundary">
@@ -476,6 +572,68 @@
     </ErrorContent>
 </ErrorBoundary>
 
+<!-- Cash Payment Modal -->
+@if (showCashPaymentModal)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content cash-payment-modal">
+                <div class="cash-payment-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-money-bill-wave me-2"></i>
+                        @cashPaymentModalTitleLabel
+                    </h4>
+                </div>
+                <div class="cash-modal-body">
+                    <div class="cash-payment-row">
+                        <label for="amount" class="cash-payment-label">@amountLabel:</label>
+                        <input type="text" id="amount" class="cash-payment-input" 
+                               value="@cashPaymentModel.Amount.ToString("F2")"
+                               readonly />
+                    </div>
+                    
+                    <div class="cash-payment-row">
+                        <label for="cash" class="cash-payment-label">@cashLabel:</label>
+                        <input type="text" id="cash" class="cash-payment-input" 
+                               value="@cashInputValue"
+                               @oninput="HandleCashInputChange"
+                               placeholder="0.00"
+                               maxlength="10" />
+                    </div>
+                    
+                    <div class="cash-payment-row">
+                        <label for="bank" class="cash-payment-label">@bankLabel:</label>
+                        <input type="text" id="bank" class="cash-payment-input" 
+                               value="@bankInputValue"
+                               @oninput="HandleBankInputChange"
+                               placeholder="0.00"
+                               maxlength="10" />
+                    </div>
+                    
+                    <div class="cash-payment-row">
+                        <label for="change" class="cash-payment-label">@changeLabel:</label>
+                        <input type="text" id="change" 
+                               class="@($"cash-payment-input {(cashPaymentModel.Change >= 0 ? "cash-change-positive" : "cash-change-negative")}")" 
+                               value="@cashPaymentModel.Change.ToString("F2")"
+                               readonly />
+                    </div>
+                </div>
+                <div class="cash-modal-buttons">
+                    <button type="button" class="btn btn-secondary me-3" @onclick="CloseCashPaymentModal">
+                        <i class="fas fa-times me-1"></i>
+                        @cancelLabel
+                    </button>
+                    <button type="button" class="btn btn-success" @onclick="ProcessCashPayment">
+                        <i class="fas fa-check me-1"></i>
+                        @okLabel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private Server.Models.SalesInvoice sale = new()
     {
@@ -556,6 +714,25 @@
     private string startTypingDescriptionLabel = string.Empty;
     private string backLabel = string.Empty;
 
+    // Cash Payment Modal properties
+    private bool showCashPaymentModal = false;
+    private CashPaymentModel cashPaymentModel = new();
+    private bool isCashCategory = false;
+
+    // Cash Payment Modal localization strings
+    private string cashPaymentModalTitleLabel = string.Empty;
+    private string amountLabel = string.Empty;
+    private string cashLabel = string.Empty;
+    private string bankLabel = string.Empty;
+    private string changeLabel = string.Empty;
+    private string okLabel = string.Empty;
+    private string printReceiptLabel = string.Empty;
+    private string cancelLabel = string.Empty;
+
+    // Cash and Bank input values for binding
+    private string cashInputValue = "0.00";
+    private string bankInputValue = "0.00";
+
     protected override async Task OnInitializedAsync()
     {
         // Load localization strings first - this is component initialization
@@ -563,6 +740,9 @@
         
         // Then load invoice data
         await LoadInvoice();
+        
+        // Check if this is Cash category
+        await CheckIfCashCategory();
     }
 
     private async Task LoadInvoice()
@@ -755,18 +935,43 @@
 
             try
             {
+                if (!IsEdit)
+                {
+                    await SalesService.CreateSaleAsync(sale);
+                }
+                else
+                {
+                    await SalesService.UpdateSaleAsync(sale, userId);
+                }
+
+                // Check if this is Cash category and show payment modal
+                if (isCashCategory && !IsEdit)
+                {
+                    cashPaymentModel = new CashPaymentModel
+                    {
+                        Amount = sale.TotalWithVAT,
+                        Cash = 0,
+                        Bank = 0,
+                        Change = 0
+                    };
+                    
+                    showCashPaymentModal = true;
+                    isSaving = false;
+                    StateHasChanged();
+                    return;
+                }
+
+                // For non-cash categories or edits, proceed normally
                 var categories = await StateContainer.GetSalesCategoriesAsync();
                 var category = categories.FirstOrDefault(c => c.Id == sale.SalesCategoryId);
                 var categoryRoute = category?.Code != null ? GetCategoryRoute(category.Code) : "sales";
 
                 if (!IsEdit)
                 {
-                    await SalesService.CreateSaleAsync(sale);
                     await JSRuntime.InvokeVoidAsync("alert", invoiceCreatedSuccessfullyLabel);
                 }
                 else
                 {
-                    await SalesService.UpdateSaleAsync(sale, userId);
                     await JSRuntime.InvokeVoidAsync("alert", invoiceUpdatedSuccessfullyLabel);
                 }
 
@@ -1222,7 +1427,18 @@
         backToSalesLabel = LocalizationService.GetString("STRING_00151", languageId) ?? "Back to Sales";
         startTypingDescriptionLabel = LocalizationService.GetString("STRING_00143", languageId) ?? "Start typing description...";
         backLabel = LocalizationService.GetString("STRING_00142", languageId) ?? "Back";
+
+        // Add Cash Payment Modal strings
+        cashPaymentModalTitleLabel = LocalizationService.GetString("STRING_00225", languageId) ?? "Cash Payment";
+        amountLabel = LocalizationService.GetString("STRING_00226", languageId) ?? "Amount";
+        cashLabel = LocalizationService.GetString("STRING_00227", languageId) ?? "Cash";
+        bankLabel = LocalizationService.GetString("STRING_00228", languageId) ?? "Bank";
+        changeLabel = LocalizationService.GetString("STRING_00229", languageId) ?? "Change";
+        okLabel = LocalizationService.GetString("STRING_00230", languageId) ?? "OK";
+        printReceiptLabel = LocalizationService.GetString("STRING_00231", languageId) ?? "Print Receipt";
+        cancelLabel = LocalizationService.GetString("STRING_00153", languageId) ?? "Cancel";
     }
+
     private async Task OnPriceWithoutVatInput(ChangeEventArgs e, SalesInvoiceItem item)
     {
         if (item == null) return;
@@ -1257,5 +1473,208 @@
             item.PriceWithoutVAT = Math.Round(item.PriceWithVAT / (1 + (item.VATPercent / 100)), 2);
             await CalculateItemTotal(item);
         }
+    }
+
+    private async Task CheckIfCashCategory()
+    {
+        try
+        {
+            var categories = await StateContainer.GetSalesCategoriesAsync();
+            var category = categories.FirstOrDefault(c => c.Id == sale.SalesCategoryId);
+            isCashCategory = category?.Code?.ToUpper() == "CASH";
+            
+            // Initialize input values
+            cashInputValue = "0.00";
+            bankInputValue = "0.00";
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error checking category", ex.Message);
+            isCashCategory = false;
+        }
+    }
+
+    // Cash Payment Modal methods
+    private void CalculateChange()
+    {
+        var totalPaid = cashPaymentModel.Cash + cashPaymentModel.Bank;
+        cashPaymentModel.Change = Math.Round(totalPaid - cashPaymentModel.Amount, 2);
+        
+        StateHasChanged();
+    }
+
+    private async Task CloseCashPaymentModal()
+    {
+        showCashPaymentModal = false;
+        cashPaymentModel = new CashPaymentModel();
+        cashInputValue = "0.00";
+        bankInputValue = "0.00";
+        
+        // Reset to a clean new invoice state
+        await ResetToNewInvoice();
+    }
+
+    private async Task ProcessCashPayment()
+    {
+        try
+        {
+            // Hide modal first
+            showCashPaymentModal = false;
+            StateHasChanged();
+
+            // Print the invoice
+            await JSRuntime.InvokeVoidAsync("window.print");
+
+            // Reset to a clean new invoice state instead of just navigating 
+            await ResetToNewInvoice();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error processing payment: {ex.Message}");
+        }
+    }
+
+    // Add this new method to reset the invoice to a clean state
+    private async Task ResetToNewInvoice()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            var currentBusinessUnitId = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentBusinessUnit");
+            int businessUnitId = 0;
+            
+            if (!string.IsNullOrEmpty(currentBusinessUnitId) && int.TryParse(currentBusinessUnitId, out businessUnitId))
+            {
+                // For cash invoices, always use category ID 2 (cash) when resetting
+                var categoryId = 2; // Force cash category ID
+
+                // Create a completely fresh invoice
+                sale = new Server.Models.SalesInvoice
+                {
+                    InvoiceDate = DateTime.Now,
+                    InvoiceExpiryDate = null,
+                    Items = new List<SalesInvoiceItem>(),
+                    CreatedByUserId = userId ?? throw new InvalidOperationException(userNotAuthenticatedLabel),
+                    CreatedAt = DateTime.UtcNow,
+                    SalesCategoryId = categoryId,
+                    BusinessUnitId = businessUnitId,
+                    // Ensure all other fields are in default state
+                    BuyerId = 0,
+                    BuyerCode = "",
+                    BuyerName = "",
+                    TotalWithoutVAT = 0,
+                    TotalVATAmount = 0,
+                    TotalWithVAT = 0,
+                    TotalDiscountAmount = 0
+                };
+
+                // Reset search states
+                buyerSearchResults.Clear();
+                showBuyerSearch = false;
+                articleSearchResults.Clear();
+                showArticleSearch = false;
+                activeSearchItem = null;
+
+                // Reset cash payment modal state
+                showCashPaymentModal = false;
+                cashPaymentModel = new CashPaymentModel();
+                cashInputValue = "0.00";
+                bankInputValue = "0.00";
+
+                // Create new edit context
+                editContext = new EditContext(sale);
+                editContext.OnValidationStateChanged += ValidationStateChanged;
+                
+                // Reload category info
+                await LoadCategoryName();
+                await CheckIfCashCategory();
+
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error resetting invoice", ex.Message);
+        }
+    }
+
+    // Cash Payment Model - Add this class definition
+    public class CashPaymentModel
+    {
+        public decimal Amount { get; set; }
+        public decimal Cash { get; set; }
+        public decimal Bank { get; set; }
+        public decimal Change { get; set; }
+
+        public CashPaymentModel()
+        {
+            Amount = 0;
+            Cash = 0;
+            Bank = 0;
+            Change = 0;
+        }
+    }
+    private void HandleCashInputChange(ChangeEventArgs e)
+    {
+        var input = e.Value?.ToString() ?? "";
+        cashInputValue = ValidateAndFormatNumericInput(input);
+        
+        if (decimal.TryParse(cashInputValue, out var cashValue))
+        {
+            cashPaymentModel.Cash = Math.Round(cashValue, 2);
+        }
+        else
+        {
+            cashPaymentModel.Cash = 0;
+        }
+        
+        CalculateChange();
+        StateHasChanged();
+    }
+
+    private void HandleBankInputChange(ChangeEventArgs e)
+    {
+        var input = e.Value?.ToString() ?? "";
+        bankInputValue = ValidateAndFormatNumericInput(input);
+        
+        if (decimal.TryParse(bankInputValue, out var bankValue))
+        {
+            cashPaymentModel.Bank = Math.Round(bankValue, 2);
+        }
+        else
+        {
+            cashPaymentModel.Bank = 0;
+        }
+        
+        CalculateChange();
+        StateHasChanged();
+    }
+
+    private string ValidateAndFormatNumericInput(string input)
+    {
+        var cleanInput = "";
+        var decimalFound = false;
+        var decimalPlaces = 0;
+
+        foreach (char c in input)
+        {
+            if (char.IsDigit(c))
+            {
+                if (decimalFound && decimalPlaces >= 2)
+                    break; // Limit to 2 decimal places
+                
+                cleanInput += c;
+                if (decimalFound) decimalPlaces++;
+            }
+            else if (c == '.' && !decimalFound && cleanInput.Length > 0)
+            {
+                cleanInput += c;
+                decimalFound = true;
+            }
+        }
+
+        return cleanInput;
     }
 }
