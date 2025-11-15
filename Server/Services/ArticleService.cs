@@ -232,8 +232,8 @@ namespace Server.Services
                         throw new InvalidOperationException($"Article with ID {articleId} not found");
                     }
 
-                    // Subtract the quantity (can go negative)
-                    article.StockQuantity -= (int)quantityToSubtract;
+                    // Subtract the quantity (can go negative) - now supports decimals
+                    article.StockQuantity -= quantityToSubtract;  // Remove the (int) cast!
                     article.UpdatedAt = DateTime.UtcNow;
                 }
 

@@ -242,6 +242,58 @@ namespace Server.Services
                 return false;
             }
 
+            // Calculate stock adjustments BEFORE updating the database
+            var stockAdjustments = new List<(int articleId, decimal quantityChange)>();
+
+            // Handle removed items (restore their quantities by adding them back)
+            var existingItemIds = existingSale.Items.Select(i => i.Id).ToList();
+            var updatedItemIds = sale.Items?.Where(i => i.Id > 0).Select(i => i.Id).ToList() ?? new List<int>();
+            var itemsToRemove = existingSale.Items.Where(i => !updatedItemIds.Contains(i.Id)).ToList();
+            
+            foreach (var itemToRemove in itemsToRemove)
+            {
+                // Add back the quantity that was previously sold (restore stock)
+                stockAdjustments.Add((itemToRemove.ArticleId, -itemToRemove.Quantity));
+                _context.SalesInvoiceItems.Remove(itemToRemove);
+            }
+
+            // Handle updated and new items
+            if (sale.Items != null)
+            {
+                foreach (var item in sale.Items)
+                {
+                    if (item.Id > 0)
+                    {
+                        // Existing item - check if quantity changed
+                        var existingItem = existingSale.Items.FirstOrDefault(i => i.Id == item.Id);
+                        if (existingItem != null && existingItem.Quantity != item.Quantity)
+                        {
+                            // Calculate the difference in quantities
+                            var quantityDifference = item.Quantity - existingItem.Quantity;
+                            if (quantityDifference != 0)
+                            {
+                                // If quantity increased, subtract more from stock (positive difference)
+                                // If quantity decreased, add back to stock (negative difference)
+                                stockAdjustments.Add((item.ArticleId, quantityDifference));
+                            }
+                        }
+                        
+                        if (existingItem != null)
+                        {
+                            _context.Entry(existingItem).CurrentValues.SetValues(item);
+                        }
+                    }
+                    else
+                    {
+                        // New item - subtract its quantity from stock
+                        item.SalesInvoiceId = sale.Id;
+                        existingSale.Items.Add(item);
+                        stockAdjustments.Add((item.ArticleId, item.Quantity));
+                    }
+                }
+            }
+
+            // Update sale totals
             sale.LastModifiedAt = DateTime.UtcNow;
             sale.LastModifiedByUserId = userId;
 
@@ -250,42 +302,22 @@ namespace Server.Services
             sale.TotalWithVAT = sale.Items?.Sum(item => item.ValueWithVAT) ?? 0;
             sale.TotalDiscountAmount = sale.Items?.Sum(item => item.DiscountAmount) ?? 0;
 
-            var existingItemIds = existingSale.Items.Select(i => i.Id).ToList();
-            var updatedItemIds = sale.Items?.Where(i => i.Id > 0).Select(i => i.Id).ToList() ?? new List<int>();
-            var itemsToRemove = existingSale.Items.Where(i => !updatedItemIds.Contains(i.Id)).ToList();
-            
-            foreach (var itemToRemove in itemsToRemove)
-            {
-                _context.SalesInvoiceItems.Remove(itemToRemove);
-            }
-
-            if (sale.Items != null)
-            {
-                foreach (var item in sale.Items)
-                {
-                    if (item.Id > 0)
-                    {
-                        var existingItem = existingSale.Items.FirstOrDefault(i => i.Id == item.Id);
-                        if (existingItem != null)
-                        {
-                            _context.Entry(existingItem).CurrentValues.SetValues(item);
-                        }
-                    }
-                    else
-                    {
-                        item.SalesInvoiceId = sale.Id;
-                        existingSale.Items.Add(item);
-                    }
-                }
-            }
-
+            // Update sale properties (preserve invoice number)
             var originalInvoiceNumber = existingSale.InvoiceNumber;
             _context.Entry(existingSale).CurrentValues.SetValues(sale);
             existingSale.InvoiceNumber = originalInvoiceNumber;
 
             try
             {
+                // Save the invoice changes first
                 await _context.SaveChangesAsync();
+
+                // Apply stock adjustments if any
+                if (stockAdjustments.Any())
+                {
+                    await _articleService.UpdateStockQuantitiesAsync(stockAdjustments);
+                }
+
                 return true;
             }
             catch (Exception ex)

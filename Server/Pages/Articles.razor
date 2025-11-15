@@ -101,7 +101,7 @@
                                             </td>
                                             <td>
                                                 <span class="@(article.StockQuantity <= 10 ? "text-danger fw-bold" : "")">
-                                                    @article.StockQuantity
+                                                    @FormatStockQuantity(article.StockQuantity)
                                                 </span>
                                             </td>
                                             <td>
@@ -253,5 +253,17 @@
     private void CreateNewArticle()
     {
         Navigation.NavigateTo("/articles/create");
+    }
+
+    // Format stock quantity to show clean numbers (no unnecessary decimals)
+    private string FormatStockQuantity(decimal stockQuantity)
+    {
+        // If it's a whole number, show without decimals
+        if (stockQuantity == Math.Floor(stockQuantity))
+        {
+            return stockQuantity.ToString("0");
+        }
+        // Otherwise show up to 2 decimal places, removing trailing zeros
+        return stockQuantity.ToString("0.##");
     }
 }

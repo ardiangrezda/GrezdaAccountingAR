@@ -96,10 +96,10 @@
                                         <td>@article.VATAmount.ToString("F2") @article.Currency?.Code</td>
                                     </tr>
                                     <tr>
-                                        <td><strong>@stockQuantityLabel:</strong></td>
+                                        <td><strong>@(stockQuantityLabel):</strong></td>
                                         <td>
                                             <span class="@(article.StockQuantity <= 10 ? "text-danger fw-bold" : "")">
-                                                @article.StockQuantity @article.Unit?.Code
+                                                @FormatStockQuantity(article.StockQuantity) @article.Unit?.Code
                                             </span>
                                             @if (article.StockQuantity <= 10)
                                             {
@@ -301,5 +301,15 @@ else
             article = await ArticleService.GetArticleByIdAsync(Id);
             StateHasChanged();
         }
+    }
+
+    // In ArticleDetail.razor and other places where StockQuantity is displayed
+    private string FormatStockQuantity(decimal stockQuantity)
+    {
+        if (stockQuantity == Math.Floor(stockQuantity))
+        {
+            return stockQuantity.ToString("0");
+        }
+        return stockQuantity.ToString("0.##");
     }
 }

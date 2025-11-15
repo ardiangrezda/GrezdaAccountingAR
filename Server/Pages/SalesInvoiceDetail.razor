@@ -156,7 +156,7 @@
                                                 <td class="text-center">@index</td>
                                                 <td>@item.ArticleCode</td>
                                                 <td>@item.Description</td>
-                                                <td class="text-end">@item.Quantity.ToString("F2")</td>
+                                                <td class="text-end">@FormatQuantity(item.Quantity)</td>
                                                 <td class="text-center">@item.UnitCode</td>
                                                 <td class="text-end">@item.PriceWithoutVAT.ToString("F2")</td>
                                                 <td class="text-end">@item.DiscountPercent.ToString("F2")%</td>
@@ -724,5 +724,14 @@ else
         {
             await JSRuntime.InvokeVoidAsync("alert", errorPrintingInvoiceLabel + $": {ex.Message}");
         }
+    }
+
+    private string FormatQuantity(decimal quantity)
+    {
+        if (quantity == Math.Floor(quantity))
+        {
+            return quantity.ToString("0");
+        }
+        return quantity.ToString("0.##");
     }
 }

@@ -431,11 +431,13 @@
                                                                     </div>
                                                                 </td>
                                                                 <td>
-                                                                    <input type="number"
+                                                                    <input type="text"
                                                                            class="@($"form-control form-control-sm text-end {(item.Quantity <= 0 ? "invalid-field" : "")}")"
-                                                                           @bind="item.Quantity"
-                                                                           @bind:event="oninput"
-                                                                           @onblur="() => CalculateItemTotal(item)" />
+                                                                           value="@FormatQuantity(item.Quantity)"
+                                                                           @oninput="(e) => HandleQuantityInput(e, item)"
+                                                                           @onblur="() => CalculateItemTotal(item)"
+                                                                           placeholder="1"
+                                                                           style="min-width: 80px;" />
                                                                 </td>
                                                                 <td class="text-center">@item.UnitCode</td>
                                                                 <td class="text-end">
@@ -1676,5 +1678,34 @@
         }
 
         return cleanInput;
+    }
+
+    // Format quantity to show clean numbers (no unnecessary decimals)
+    private string FormatQuantity(decimal quantity)
+    {
+        // If it's a whole number, show without decimals
+        if (quantity == Math.Floor(quantity))
+        {
+            return quantity.ToString("0");
+        }
+        // Otherwise show up to 2 decimal places, removing trailing zeros
+        return quantity.ToString("0.##");
+    }
+
+    // Handle quantity input changes
+    private void HandleQuantityInput(ChangeEventArgs e, SalesInvoiceItem item)
+    {
+        var input = e.Value?.ToString() ?? "";
+        
+        if (decimal.TryParse(input, out var quantity) && quantity > 0)
+        {
+            item.Quantity = quantity;
+        }
+        else if (string.IsNullOrEmpty(input))
+        {
+            item.Quantity = 1; // Default to 1 if empty
+        }
+        
+        StateHasChanged();
     }
 }

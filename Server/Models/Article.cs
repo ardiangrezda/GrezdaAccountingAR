@@ -34,7 +34,8 @@ namespace Server.Models
         [Required]
         public int VATId { get; set; }
 
-        public int StockQuantity { get; set; }
+        [Column(TypeName = "decimal(18,4)")]
+        public decimal StockQuantity { get; set; }
 
         [StringLength(100)]
         public string Category { get; set; } = string.Empty;

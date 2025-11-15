@@ -100,7 +100,11 @@
 
                                 <div class="mb-3">
                                     <label for="stockQuantity" class="form-label">@stockQuantityLabel</label>
-                                    <InputNumber id="stockQuantity" @bind-Value="article.StockQuantity" class="form-control" />
+                                    <input type="text" id="stockQuantity" 
+                                           class="form-control text-end" 
+                                           value="@FormatStockQuantity(article.StockQuantity)"
+                                           @oninput="HandleStockQuantityInput"
+                                           placeholder="0.00" />
                                     <ValidationMessage For="@(() => article.StockQuantity)" />
                                 </div>
 
@@ -337,5 +341,34 @@
                 saving = false;
             }
         }
+    }
+
+    // Format stock quantity to show clean numbers (max 2 decimal places)
+    private string FormatStockQuantity(decimal stockQuantity)
+    {
+        // If it's a whole number, show without decimals
+        if (stockQuantity == Math.Floor(stockQuantity))
+        {
+            return stockQuantity.ToString("0");
+        }
+        // Otherwise show up to 2 decimal places, removing trailing zeros
+        return stockQuantity.ToString("0.##");
+    }
+
+    // Handle stock quantity input changes
+    private void HandleStockQuantityInput(ChangeEventArgs e)
+    {
+        var input = e.Value?.ToString() ?? "";
+        
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            article.StockQuantity = 0;
+        }
+        else if (decimal.TryParse(input, out var quantity) && quantity >= 0)
+        {
+            article.StockQuantity = Math.Round(quantity, 4); // Round to 4 decimals for database storage
+        }
+        
+        StateHasChanged();
     }
 }
