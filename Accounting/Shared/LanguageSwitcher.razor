@@ -1,0 +1,31 @@
+﻿@using Accounting.Services
+@using Accounting.Models
+@inject ILocalizationService LocalizationService
+@inject NavigationManager Navigation
+
+<select @onchange="ChangeLanguage" class="form-select form-select-sm" value="@currentLanguageId">
+    <option value="1">English</option>
+    <option value="2">Albanian</option>
+    <option value="3">Serbian</option>
+</select>
+
+@code {
+    private int currentLanguageId = 1; // Default to English
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentLanguageId = LocalizationService.CurrentLanguageId;
+    }
+
+    private async Task ChangeLanguage(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int newLanguageId))
+        {
+            currentLanguageId = newLanguageId;
+            await LocalizationService.SetLanguageAsync(newLanguageId);
+
+            // Force page reload
+            Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+        }
+    }
+}

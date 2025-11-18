@@ -1,0 +1,154 @@
+﻿@page "/admin/business-units/create"
+@page "/admin/business-units/edit/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@using Models
+@using Services
+@inject BusinessUnitService businessUnitService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject ILocalizationService LocalizationService
+@attribute [Authorize]
+
+<div class="container-fluid px-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">@(IsEdit? @editBusinessUnitLabel : @addBusinessUnitLabel)</h3>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="businessUnit" OnValidSubmit="HandleValidSubmit">
+                        <DataAnnotationsValidator />
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">@codeLabel</label>
+                                <InputText @bind-Value="businessUnit.Code" class="form-control" />
+                                <ValidationMessage For="@(() => businessUnit.Code)" />
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">@nameLabel</label>
+                                <InputText @bind-Value="businessUnit.Name" class="form-control" />
+                                <ValidationMessage For="@(() => businessUnit.Name)" />
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">@descriptionLabel</label>
+                                <InputTextArea @bind-Value="businessUnit.Description" class="form-control" rows="3" />
+                                <ValidationMessage For="@(() => businessUnit.Description)" />
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">@addressLabel</label>
+                                <InputTextArea @bind-Value="businessUnit.Address" class="form-control" rows="3" />
+                                <ValidationMessage For="@(() => businessUnit.Address)" />
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <InputCheckbox @bind-Value="businessUnit.IsActive" class="form-check-input" id="isActive" />
+                                    <label class="form-check-label" for="isActive">@isActiveLabel</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary me-2">@saveLabel</button>
+                                <button type="button" class="btn btn-secondary" @onclick="GoBack">@cancelLabel</button>
+                            </div>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private bool IsEdit => Id.HasValue;
+    private BusinessUnit businessUnit = new();
+
+    // Localization strings
+    private string editBusinessUnitLabel = string.Empty;
+    private string addBusinessUnitLabel = string.Empty;
+    private string codeLabel = string.Empty;
+    private string nameLabel = string.Empty;
+    private string descriptionLabel = string.Empty;
+    private string addressLabel = string.Empty;
+    private string isActiveLabel = string.Empty;
+    private string saveLabel = string.Empty;
+    private string cancelLabel = string.Empty;
+    private string businessUnitUpdatedLabel = string.Empty;
+    private string businessUnitCreatedLabel = string.Empty;
+    private string errorSavingBusinessUnitLabel = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLocalizationStrings();
+        if (IsEdit && Id.HasValue)
+        {
+            var existingUnit = await businessUnitService.GetByIdAsync(Id.Value);
+            if (existingUnit != null)
+            {
+                businessUnit = existingUnit;
+            }
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (IsEdit)
+            {
+                await businessUnitService.UpdateAsync(businessUnit);
+                await JSRuntime.InvokeVoidAsync("alert", businessUnitUpdatedLabel);
+            }
+            else
+            {
+                await businessUnitService.CreateAsync(businessUnit);
+                await JSRuntime.InvokeVoidAsync("alert", businessUnitCreatedLabel);
+            }
+            GoBack();
+
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"{errorSavingBusinessUnitLabel} {ex.Message}");
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/admin/business-units");
+    }
+
+    private async Task LoadLocalizationStrings()
+    {
+        var languageId = await LocalizationService.GetDefaultLanguageId();
+
+        editBusinessUnitLabel = LocalizationService.GetString("STRING_00190", languageId) ?? "Edit Business Unit";
+        addBusinessUnitLabel = LocalizationService.GetString("STRING_00191", languageId) ?? "Add Business Unit";
+        codeLabel = LocalizationService.GetString("STRING_00033", languageId) ?? "Code";
+        nameLabel = LocalizationService.GetString("STRING_00011", languageId) ?? "Name";
+        descriptionLabel = LocalizationService.GetString("STRING_00028", languageId) ?? "Description";
+        addressLabel = LocalizationService.GetString("STRING_00047", languageId) ?? "Address";
+        isActiveLabel = LocalizationService.GetString("STRING_00192", languageId) ?? "Is Active";
+        saveLabel = LocalizationService.GetString("STRING_00024", languageId) ?? "Save";
+        cancelLabel = LocalizationService.GetString("STRING_00025", languageId) ?? "Cancel";
+        businessUnitUpdatedLabel = LocalizationService.GetString("STRING_00193", languageId) ?? "Business unit updated successfully!";
+        businessUnitCreatedLabel = LocalizationService.GetString("STRING_00194", languageId) ?? "Business unit created successfully!";
+        errorSavingBusinessUnitLabel = LocalizationService.GetString("STRING_00195", languageId) ?? "Error saving business unit:";
+    }
+}

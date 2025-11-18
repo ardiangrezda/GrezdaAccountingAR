@@ -1,0 +1,12 @@
+﻿@page "/logout"
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Identity
+@using Models
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager Navigation
+@{
+    await SignInManager.SignOutAsync();
+    Navigation.NavigateTo("/", forceLoad: true);
+}
+
+<p>Logging out...</p>

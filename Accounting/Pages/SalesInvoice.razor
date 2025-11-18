@@ -1,0 +1,1985 @@
+@page "/sales/create"
+@page "/sales/create/{Category}"
+@page "/sales/edit/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Linq
+@using Models
+@using Services
+@using System.Security.Claims
+@inject SalesService SalesService
+@inject ArticleService ArticleService
+@inject SubjectService SubjectService
+@inject SalesCategoryService SalesCategoryService
+@inject BusinessUnitService BusinessUnitService
+@inject ILocalizationService LocalizationService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject StateContainer StateContainer
+@attribute [Authorize]
+
+<style>
+    .table th {
+        font-size: 0.85rem;
+        padding: 0.5rem;
+        background-color: #4CAF50 !important;
+        color: white;
+    }
+
+    .table td {
+        padding: 0.25rem;
+        vertical-align: middle;
+        font-size: 0.85rem;
+    }
+
+    .table tr.totals-row {
+        background-color: #E8F5E9;
+        font-weight: bold;
+    }
+
+    /* style for Add Article button to match totals-row */
+    .btn-add-item {
+        background-color: #E8F5E9;
+        color: #2e7d32;
+        border: 1px solid #c8e6c9;
+        box-shadow: none;
+        padding: .35rem .6rem;
+        border-radius: .25rem;
+    }
+    .btn-add-item:hover,
+    .btn-add-item:focus {
+        background-color: #c8e6c9;
+        color: #1b5e20;
+        text-decoration: none;
+    }
+
+    .form-control-sm {
+        padding: 0.25rem 0.5rem;
+        height: calc(1.5em + 0.5rem + 2px);
+        font-size: 0.875rem;
+    }
+
+    .input-group-sm > .form-control,
+    .input-group-sm > .input-group-text {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .btn-remove {
+        padding: 0.375rem 0.75rem;
+        font-size: 1rem;
+    }
+
+    .invoice-summary {
+        background-color: #4CAF50 !important;
+        color: white;
+        padding: 0.5rem 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .total-due {
+        background-color: #4CAF50 !important;
+        color: white;
+        padding: 0.5rem 1rem;
+    }
+
+    .form-label.small {
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .mb-2 {
+        margin-bottom: 0.5rem !important;
+    }
+
+    .invalid-field {
+        border-color: #dc3545;
+    }
+
+    .search-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1050;
+        min-width: 100%;
+    }
+    
+    .buyer-item, .article-item {
+        cursor: pointer;
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid #f8f9fa;
+        transition: background-color 0.15s ease-in-out;
+    }
+    
+    .buyer-item:hover, .article-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .buyer-item:last-child, .article-item:last-child {
+        border-bottom: none;
+    }
+    
+    .position-relative {
+        position: relative !important;
+    }
+    
+    .table-responsive {
+        overflow: visible !important;
+    }
+    
+    .table {
+        overflow: visible !important;
+    }
+    
+    .table td {
+        overflow: visible !important;
+        position: relative;
+    }
+    
+    .article-item div, .buyer-item div {
+        font-size: 0.875rem;
+        line-height: 1.25;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .table thead th {
+        background-color: #4CAF50 !important;
+        color: white !important;
+        border-color: #4CAF50 !important;
+    }
+
+    .table-light th {
+        background-color: #4CAF50 !important;
+        color: white !important;
+    }
+
+    .no-spin::-webkit-outer-spin-button,
+    .no-spin::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spin {
+  -moz-appearance: textfield; /* hide Firefox spinner */
+}
+
+/* Cash Payment Modal Styles - Compact Version */
+.cash-payment-modal {
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    max-width: 280px;
+    width: 85%;
+    margin: 0 auto;
+}
+
+.cash-payment-header {
+    background: linear-gradient(45deg, #4CAF50, #45a049);
+    color: white;
+    border-radius: 12px 12px 0 0;
+    padding: 0.75rem 1rem;
+    text-align: center;
+}
+
+.cash-payment-header h4 {
+    font-size: 1rem;
+    margin-bottom: 0;
+}
+
+.cash-modal-body {
+    padding: 1.5rem 1rem;
+    background-color: white;
+}
+
+.cash-payment-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.8rem;
+    gap: 0.5rem;
+    padding-left: 40px; /* Add whitespace before the entire row */
+}
+
+.cash-payment-label {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+    min-width: 60px; /* Increased from 50px to 60px for the label */
+    text-align: right;
+    margin-bottom: 0;
+}
+
+.cash-payment-input {
+    width: 100px; /* Reduced from 120px to make it smaller */
+    padding: 0.5rem;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 1rem;
+    text-align: center;
+    background-color: white;
+    transition: border-color 0.2s;
+}
+
+.cash-payment-input:focus {
+    border-color: #4CAF50;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+.cash-payment-input[readonly] {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    color: #6c757d;
+}
+
+.cash-change-positive {
+    color: #28a745;
+    font-weight: bold;
+    background-color: #d4edda;
+}
+
+.cash-change-negative {
+    color: #dc3545;
+    font-weight: bold;
+    background-color: #f8d7da;
+}
+
+.cash-modal-buttons {
+    padding: 1rem; /* Reduced padding */
+    border-top: 1px solid #dee2e6;
+    background-color: white;
+    border-radius: 0 0 12px 12px;
+    text-align: center;
+    gap: 0.5rem;
+    display: flex;
+    justify-content: center;
+}
+
+.cash-modal-buttons .btn {
+    font-size: 0.9rem; /* Smaller button text */
+    padding: 0.5rem 1rem; /* Smaller button padding */
+}
+</style>
+
+<ErrorBoundary @ref="errorBoundary">
+    <ChildContent>
+        @if (sale != null && editContext != null)
+        {
+            <EditForm EditContext="editContext" OnValidSubmit="@HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="invoice-page">
+                    <div class="invoice-header bg-light border-bottom p-4 mb-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h1 class="mb-0">@pageTitle</h1>
+                                <small class="text-muted">
+                                    @(IsEdit? @invoiceNumberLabel + $": {sale.InvoiceNumber}" : @newInvoiceLabel)
+                                    @if (currentCategoryName != null)
+                                    {
+                                        <span class="ms-2 badge bg-info">@currentCategoryName</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(currentBusinessUnitName))
+                                    {
+                                        <span class="ms-2 badge bg-success">@currentBusinessUnitName</span>
+                                    }
+                                </small>
+                            </div>
+                            <div class="invoice-actions">
+                                <button type="button" class="btn btn-outline-secondary me-2" @onclick="GoBack">
+                                    <i class="fas fa-arrow-left"></i> @backLabel
+                                </button>
+                                <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                                    @if (isSaving)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-save"></i>
+                                    }
+                                    @saveInvoiceLabel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="container-fluid px-4">
+                        <div class="card mb-4 shadow-sm">
+                            <div class="card-body">
+                                <!-- Compact Header Row with Dates and Buyer -->
+                                <div class="row mb-4">
+                                    <!-- Invoice Dates - Compact horizontal layout -->
+                                    <div class="col-md-4">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <div class="mb-2">
+                                                    <label class="form-label fw-bold small">@invoiceDateLabel</label>
+                                                    <InputDate @bind-Value="sale.InvoiceDate" class="form-control form-control-sm" />
+                                                    <ValidationMessage For="@(() => sale.InvoiceDate)" class="text-danger small" />
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="mb-2">
+                                                    <label class="form-label fw-bold small">@expiryDateLabel</label>
+                                                    <InputDate @bind-Value="sale.InvoiceExpiryDate" class="form-control form-control-sm" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Buyer Information - Compact -->
+                                    <div class="col-md-5">
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">@buyerNameLabel</label>
+                                            <div class="position-relative">
+                                                <input value="@sale.BuyerName"
+                                                       @oninput="HandleBuyerSearch"
+                                                       class="@($"form-control form-control-sm {(sale.BuyerId <= 0 ? "invalid-field" : "")}")"
+                                                       placeholder="@startTypingBuyerNameLabel" />
+                                                @if (showBuyerSearch && buyerSearchResults.Any())
+                                                {
+                                                    <div class="search-dropdown">
+                                                        @foreach (var buyer in buyerSearchResults)
+                                                        {
+                                                            <div class="buyer-item" @onclick="() => SelectBuyer(buyer)">
+                                                                <div class="fw-bold">@buyer.SubjectName</div>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <!-- Additional space -->
+                                    </div>
+                                </div>
+
+                                <!-- Invoice Items -->
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h5 class="mb-3">@invoiceItemsLabel</h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width: 40px">#</th>
+                                                        <th style="width: 150px">@articleLabel</th>
+                                                        <th style="width: 200px">@descriptionLabel</th>
+                                                        @if (isReturnCategory)
+                                                        {
+                                                            <th style="width: 80px" class="text-end">@originalQtyLabel</th>
+                                                            <th style="width: 80px" class="text-end">@returnableQtyLabel</th>
+                                                        }
+                                                        <th style="width: 80px" class="text-end">@quantityLabel</th>
+                    @*<th style="width: 80px" class="text-center">@unitLabel</th>*@
+                                                        <th style="width: 80px" class="text-center">@unitLabel</th>
+                                                        <th style="width: 120px" class="text-end">@priceExclLabel</th>
+                                                        <th style="width: 120px" class="text-end">@priceInclLabel</th>
+                                                        <th style="width: 100px" class="text-end">@discPercentLabel</th>
+                                                        <th style="width: 120px" class="text-end">@discAmountLabel</th>
+                                                        <th style="width: 120px" class="text-end">@valueExclLabel</th>
+                                                        <th style="width: 120px" class="text-end">@valueInclLabel</th>
+                                                        <th style="width: 40px"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @if (sale.Items != null && sale.Items.Count > 0)
+                                                    {
+                                                        @foreach (var (item, index) in sale.Items.Select((item, i) => (item, i + 1)))
+                                                        {
+                                                            <tr>
+                                                                <td class="text-center">@index</td>
+                                                                <td>
+                                                                    <input type="text"
+                                                                           class="@($"form-control form-control-sm {(string.IsNullOrEmpty(item.Barcode) ? "invalid-field" : "")}")"
+                                                                           @bind="item.Barcode"
+                                                                           @bind:event="oninput"
+                                                                           @onblur="() => HandleBarcodeChange(item)"
+                                                                           readonly="@(isReturnCategory)" />
+                                                                </td>
+                                                                <td>
+                                                                    <div class="position-relative">
+                                                                        <input type="text"
+                                                                               class="form-control form-control-sm"
+                                                                               value="@item.Description"
+                                                                               @oninput="(e) => HandleDescriptionSearch(e, item)"
+                                                                               @onfocus="() => SetActiveSearchItem(item)"
+                                                                               placeholder=@startTypingDescriptionLabel
+                                                                               readonly="@(isReturnCategory)" />
+                                                                        @if (activeSearchItem == item && showArticleSearch && articleSearchResults.Any() && !isReturnCategory)
+                                                                        {
+                                                                            <div class="search-dropdown">
+                                                                                @foreach (var article in articleSearchResults)
+                                                                                {
+                                                                                    <div class="article-item" @onclick="() => SelectArticle(article, item)">
+                                                                                        <div>@article.Description</div>
+                                                                                    </div>
+                                                                                }
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                </td>
+                                                                @if (isReturnCategory)
+                                                                {
+                                                                    <td class="text-end">
+                                                                        <span class="badge bg-info">@FormatQuantity(item.OriginalQuantity ?? 0)</span>
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <span class="badge bg-warning" title="@maxReturnableLabel">
+                                                                            @FormatQuantity(item.ReturnableQuantity)
+                                                                        </span>
+                                                                    </td>
+                                                                }
+                                                                <td>
+                                                                    <input type="text"
+                                                                           class="@($"form-control form-control-sm text-end {(item.Quantity <= 0 ? "invalid-field" : "")}")"
+                                                                           value="@FormatQuantity(item.Quantity)"
+                                                                           @oninput="(e) => HandleQuantityInput(e, item)"
+                                                                           @onblur="() => CalculateItemTotal(item)"
+                                                                           placeholder="0"
+                                                                           style="min-width: 80px;" />
+                                                                </td>
+                                                                <td class="text-center">@item.UnitCode</td>
+                                                                <td class="text-end">
+                                                                    <input type="number" class="form-control form-control-sm text-end no-spin"
+                                                                           step="0.01" inputmode="decimal"
+                                                                           lang="@System.Globalization.CultureInfo.CurrentCulture.Name"
+                                                                           @bind="item.PriceWithoutVAT" @bind:event="oninput"
+                                                                           @onblur="() => OnPriceWithoutVatBlurAsync(item)"
+                                                                           onkeydown="if(event.key==='ArrowUp' || event.key==='ArrowDown'){event.preventDefault();}"
+                                                                           onwheel="this.blur();" />
+                                                                </td>
+                                                                <td class="text-end">
+                                                                    <input type="number" class="form-control form-control-sm text-end"
+                                                                           @bind="item.PriceWithVAT"
+                                                                           @bind:event="oninput"
+                                                                           @onblur="() => CalculateItemTotal(item)"
+                                                                           readonly />
+                                                                </td>
+                                                                <td>
+                                                                    <div class="input-group input-group-sm">
+                                                                        <input type="number" class="form-control text-end"
+                                                                               @bind="item.DiscountPercent"
+                                                                               @bind:event="oninput"
+                                                                               @onblur="() => CalculateItemTotal(item)" />
+                                                                    </div>
+                                                                </td>
+                                                                <td class="text-end">@item.DiscountAmount.ToString("N2")</td>
+                                                                <td class="text-end">@item.ValueWithoutVAT.ToString("N2")</td>
+                                                                <td class="text-end">@item.ValueWithVAT.ToString("N2")</td>
+                                                                <td>
+                                                                    <button type="button" class="btn btn-outline-danger btn-remove" @onclick="() => RemoveItem(item)">
+                                                                        <i class="fas fa-times"></i>
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <tr>
+                                                            <td colspan="12" class="text-center text-muted">
+                                                                @noItemsAddedYetLabel
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr class="totals-row">
+                                                        <!-- Button placed in the same totals row.
+                                                             Adjust the first/second colspan values if your column count changes. -->
+                                                        <td colspan="2">
+                                                            <button type="button" class="btn btn-add-item btn-sm me-2" @onclick="AddNewItem">
+                                                                <i class="fas fa-plus"></i> @addItemLabel
+                                                            </button>
+                                                        </td>
+
+                                                        <!-- keep empty cells so totals columns remain aligned -->
+                                                        <td colspan="6"></td>
+
+                                                        <td class="text-end">@totalsLabel</td>
+                                                        <td class="text-end">@sale.TotalDiscountAmount.ToString("N2")</td>
+                                                        <td class="text-end">@sale.TotalWithoutVAT.ToString("N2")</td>
+                                                        <td class="text-end">@sale.TotalWithVAT.ToString("N2")</td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Spacer div for separation -->
+                                <div class="mb-5"></div>
+
+                                <!-- **NEW: Return Information Section (MOVED INSIDE EditForm)** -->
+                                @if (isReturnCategory && !IsEdit)
+                                {
+                                    <div class="row mb-4">
+                                        <div class="col-12">
+                                            <div class="card bg-warning-subtle border-warning">
+                                                <div class="card-header bg-warning text-dark">
+                                                    <h5 class="mb-0"><i class="fas fa-undo me-2"></i>@createReturnLabel</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="row">
+                                                        <!-- Original Invoice Selection -->
+                                                        <div class="col-md-6">
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">@originalInvoiceLabel *</label>
+                                                                <div class="position-relative">
+                                                                    <input type="text" 
+                                                                           class="form-control" 
+                                                                           placeholder="@searchOriginalInvoiceLabel"
+                                                                           value="@originalInvoiceSearchTerm"
+                                                                           @oninput="HandleOriginalInvoiceSearch" />
+                                                                    @if (showOriginalInvoiceSearch && originalInvoiceSearchResults.Any())
+                                                                    {
+                                                                        <div class="search-dropdown">
+                                                                            @foreach (var invoice in originalInvoiceSearchResults)
+                                                                            {
+                                                                                <div class="buyer-item" @onclick="() => SelectOriginalInvoice(invoice)">
+                                                                                    <div class="fw-bold">@invoice.InvoiceNumber</div>
+                                                                                    <div class="text-muted small">@invoice.BuyerName - @invoice.InvoiceDate.ToShortDateString() - @invoice.TotalWithVAT.ToString("N2")</div>
+                                                                                </div>
+                                                                            }
+                                                                        </div>
+                                                                    }
+                                                                </div>
+                                                                @if (selectedOriginalInvoice != null)
+                                                                {
+                                                                    <div class="mt-2 p-2 bg-success-subtle border border-success rounded">
+                                                                        <strong>Selected:</strong> @selectedOriginalInvoice.InvoiceNumber<br/>
+                                                                        <small>@selectedOriginalInvoice.BuyerName - @selectedOriginalInvoice.InvoiceDate.ToShortDateString()</small>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Return Reason -->
+                                                        <div class="col-md-6">
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">@returnReasonLabel *</label>
+                                                                <InputTextArea @bind-Value="sale.ReturnReason" 
+                                                                               class="form-control" 
+                                                                               rows="3" 
+                                                                               placeholder="Enter reason for return..." />
+                                                                <ValidationMessage For="@(() => sale.ReturnReason)" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    @if (selectedOriginalInvoice != null)
+                                                    {
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <button type="button" 
+                                                                        class="btn btn-warning me-2" 
+                                                                        @onclick="LoadOriginalInvoiceItems">
+                                                                    <i class="fas fa-download me-1"></i>Load Items for Return
+                                                                </button>
+                                                                <small class="text-muted">Click to load items from the original invoice</small>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+
+                                <!-- Invoice Summary Section -->
+                                <div class="row section-spacing mt-5">
+                                    <div class="col-md-6 offset-md-6">
+                                        <div class="card">
+                                            <div class="invoice-summary">
+                                                <h5 class="mb-0">@invoiceSummaryLabel</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span>@subtotalBeforeDiscountLabel</span>
+                                                    <span class="fw-bold">@((sale.TotalWithoutVAT + sale.TotalDiscountAmount).ToString("N2"))</span>
+                                                </div>
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span>@totalDiscountsLabel</span>
+                                                    <span class="fw-bold text-danger">-@sale.TotalDiscountAmount.ToString("N2")</span>
+                                                </div>
+                                                <div class="d-flex justify-content-between mb-3">
+                                                    <span>@totalVatLabel</span>
+                                                    <span class="fw-bold">@sale.TotalVATAmount.ToString("N2")</span>
+                                                </div>
+                                                <div class="total-due">
+                                                    <div class="d-flex justify-content-between">
+                                                        <span class="h5 mb-0">@totalDueLabel</span>
+                                                        <span class="h5 mb-0">@sale.TotalWithVAT.ToString("N2")</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </EditForm>
+        }
+        else if (loading)
+        {
+            <div class="text-center p-5">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning m-5">
+                <h4>Unable to load invoice</h4>
+                <p>The invoice you're trying to edit couldn't be loaded.</p>
+                <button class="btn btn-primary" @onclick="GoBack">@backToSalesLabel</button>
+            </div>
+        }
+    </ChildContent>
+    <ErrorContent>
+        <div class="alert alert-danger">
+            <h4>An error occurred while processing your request</h4>
+            <p>Please try again or contact support if the problem persists.</p>
+            <button class="btn btn-secondary" @onclick="ResetError">Try Again</button>
+            <button class="btn btn-primary ms-2" @onclick="GoBack">@backToSalesLabel</button>
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
+
+<!-- Cash Payment Modal -->
+@if (showCashPaymentModal)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content cash-payment-modal">
+                <div class="cash-payment-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-money-bill-wave me-2"></i>
+                        @cashPaymentModalTitleLabel
+                    </h4>
+                </div>
+                <div class="cash-modal-body">
+                    <div class="cash-payment-row">
+                        <label for="amount" class="cash-payment-label">@amountLabel:</label>
+                        <input type="text" id="amount" class="cash-payment-input" 
+                               value="@cashPaymentModel.Amount.ToString("F2")"
+                               readonly />
+                    </div>
+                    
+                    <div class="cash-payment-row">
+                        <label for="cash" class="cash-payment-label">@cashLabel:</label>
+                        <input type="text" id="cash" class="cash-payment-input" 
+                               value="@cashInputValue"
+                               @oninput="HandleCashInputChange"
+                               placeholder="0.00"
+                               maxlength="10" />
+                    </div>
+                    
+                    <div class="cash-payment-row">
+                        <label for="bank" class="cash-payment-label">@bankLabel:</label>
+                        <input type="text" id="bank" class="cash-payment-input" 
+                               value="@bankInputValue"
+                               @oninput="HandleBankInputChange"
+                               placeholder="0.00"
+                               maxlength="10" />
+                    </div>
+                    
+                    <div class="cash-payment-row">
+                        <label for="change" class="cash-payment-label">@changeLabel:</label>
+                        <input type="text" id="change" 
+                               class="@($"cash-payment-input {(cashPaymentModel.Change >= 0 ? "cash-change-positive" : "cash-change-negative")}")" 
+                               value="@cashPaymentModel.Change.ToString("F2")"
+                               readonly />
+                    </div>
+                </div>
+                <div class="cash-modal-buttons">
+                    <button type="button" class="btn btn-secondary me-3" @onclick="CloseCashPaymentModal">
+                        <i class="fas fa-times me-1"></i>
+                        @cancelLabel
+                    </button>
+                    <button type="button" class="btn btn-success" @onclick="ProcessCashPayment">
+                        <i class="fas fa-check me-1"></i>
+                        @okLabel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private Models.SalesInvoice sale = new()
+    {
+        InvoiceDate = DateTime.Now,
+        Items = new List<SalesInvoiceItem>()
+    };
+    private bool isSaving;
+    private bool loading = true;
+    private bool IsEdit => Id.HasValue;
+    [Parameter] public int? Id { get; set; }
+    [Parameter] public string? Category { get; set; }
+    private string pageTitle = "Create Invoice";
+    private ErrorBoundary? errorBoundary;
+    private List<SalesCategory> salesCategories = new();
+
+    private List<Subject> buyerSearchResults = new();
+    private bool showBuyerSearch = false;
+
+    private List<Article> articleSearchResults = new();
+    private bool showArticleSearch = false;
+    private SalesInvoiceItem? activeSearchItem = null;
+
+    private EditContext? editContext;
+    private string? currentCategoryName;
+    private string? currentBusinessUnitName;
+
+    // Localization strings
+    private string createInvoiceLabel = string.Empty;
+    private string editInvoiceLabel = string.Empty;
+    private string userNotAuthenticatedLabel = string.Empty;
+    private string invoiceNotFoundLabel = string.Empty;
+    private string errorLoadingInvoiceLabel = string.Empty;
+    private string noBusinessUnitSelectedLabel = string.Empty;
+    private string invoiceCreatedSuccessfullyLabel = string.Empty;
+    private string invoiceUpdatedSuccessfullyLabel = string.Empty;
+    private string errorCalculatingTotalsLabel = string.Empty;
+    private string errorAddingNewItemLabel = string.Empty;
+    private string errorLoadingArticleLabel = string.Empty;
+    private string errorSearchingArticlesLabel = string.Empty;
+    private string pleaseSelectBuyerLabel = string.Empty;
+    private string businessUnitRequiredLabel = string.Empty;
+    private string pleaseAddOneItemLabel = string.Empty;
+    private string allItemsValidArticleLabel = string.Empty;
+    private string allItemsQuantityGreaterZeroLabel = string.Empty;
+    private string errorLoadingCategoryNameLabel = string.Empty;
+    private string errorSelectingArticleLabel = string.Empty;
+
+    // SalesInvoice UI localization strings
+    private string invoiceItemsLabel = string.Empty;
+    private string saveInvoiceLabel = string.Empty;
+    private string newInvoiceLabel = string.Empty;
+    private string invoiceDateLabel = string.Empty;
+    private string expiryDateLabel = string.Empty;
+    private string buyerNameLabel = string.Empty;
+    private string addItemLabel = string.Empty;
+    private string articleLabel = string.Empty;
+    private string quantityLabel = string.Empty;
+    private string priceExclLabel = string.Empty;
+    private string priceInclLabel = string.Empty;
+    private string discPercentLabel = string.Empty;
+    private string discAmountLabel = string.Empty;
+    private string valueExclLabel = string.Empty;
+    private string valueInclLabel = string.Empty;
+    private string totalsLabel = string.Empty;
+    private string invoiceSummaryLabel = string.Empty;
+    private string subtotalBeforeDiscountLabel = string.Empty;
+    private string totalDiscountsLabel = string.Empty;
+    private string totalVatLabel = string.Empty;
+    private string totalDueLabel = string.Empty;
+    private string startTypingBuyerNameLabel = string.Empty;
+    private string noItemsAddedYetLabel = string.Empty;
+    private string invoiceNumberLabel = string.Empty;
+    private string dateLabel = string.Empty;
+    private string totalLabel = string.Empty;
+    private string descriptionLabel = string.Empty;
+    private string unitLabel = string.Empty;
+    private string backToSalesLabel = string.Empty;
+    private string startTypingDescriptionLabel = string.Empty;
+    private string backLabel = string.Empty;
+
+    // Cash Payment Modal properties
+    private bool showCashPaymentModal = false;
+    private CashPaymentModel cashPaymentModel = new();
+    private bool isCashCategory = false;
+
+    // Cash Payment Modal localization strings
+    private string cashPaymentModalTitleLabel = string.Empty;
+    private string amountLabel = string.Empty;
+    private string cashLabel = string.Empty;
+    private string bankLabel = string.Empty;
+    private string changeLabel = string.Empty;
+    private string okLabel = string.Empty;
+    private string printReceiptLabel = string.Empty;
+    private string cancelLabel = string.Empty;
+
+    // Cash and Bank input values for binding
+    private string cashInputValue = "0.00";
+    private string bankInputValue = "0.00";
+
+    // **NEW: Return-specific properties**
+    private bool isReturnCategory = false;
+    private string originalInvoiceSearchTerm = string.Empty;
+    private List<Models.SalesInvoice> originalInvoiceSearchResults = new();
+    private bool showOriginalInvoiceSearch = false;
+    private Models.SalesInvoice? selectedOriginalInvoice = null;
+
+    // **NEW: Return localization strings**
+    private string returnReasonLabel = string.Empty;
+    private string originalInvoiceLabel = string.Empty;
+    private string selectOriginalInvoiceLabel = string.Empty;
+    private string searchOriginalInvoiceLabel = string.Empty;
+    private string returnableQtyLabel = string.Empty;
+    private string originalQtyLabel = string.Empty;
+    private string maxReturnableLabel = string.Empty;
+    private string createReturnLabel = string.Empty;
+    private string returnCreatedSuccessfullyLabel = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load localization strings first - this is component initialization
+        await LoadLocalizationStrings();
+        
+        // Then load invoice data
+        await LoadInvoice();
+        
+        // Check if this is Cash category
+        await CheckIfCashCategory();
+        
+        // Check if this is a return category
+        await CheckIfReturnCategory();
+    }
+
+    private async Task LoadInvoice()
+    {
+        try
+        {
+            loading = true;
+            
+            // Now pageTitle can use the already-loaded localization strings
+            pageTitle = IsEdit ? editInvoiceLabel : createInvoiceLabel;
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            var currentBusinessUnitId = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentBusinessUnit");
+            int businessUnitId = 0;
+            
+            if (!string.IsNullOrEmpty(currentBusinessUnitId) && int.TryParse(currentBusinessUnitId, out businessUnitId))
+            {
+                try
+                {
+                    var businessUnits = await BusinessUnitService.GetAllAsync();
+                    var businessUnit = businessUnits?.FirstOrDefault(bu => bu.Id == businessUnitId);
+                    currentBusinessUnitName = businessUnit?.Name ?? $"Business Unit {businessUnitId}";
+                }
+                catch (Exception ex)
+                {
+                    await JSRuntime.InvokeVoidAsync("console.error", "Error loading business unit name", ex.Message);
+                    currentBusinessUnitName = $"Business Unit {businessUnitId}";
+                }
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", noBusinessUnitSelectedLabel);
+                Navigation.NavigateTo("/login");
+                return;
+            }
+
+            if (!IsEdit)
+            {
+                var storedCategoryId = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "selectedSalesCategoryId");
+                
+                await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "selectedSalesCategoryId");
+
+                var categoryId = !string.IsNullOrEmpty(storedCategoryId) && int.TryParse(storedCategoryId, out var id) 
+                    ? id 
+                    : 1;
+
+                sale = new Models.SalesInvoice
+                {
+                    InvoiceDate = DateTime.Now,
+                    Items = new List<SalesInvoiceItem>(),
+                    CreatedByUserId = userId ?? throw new InvalidOperationException(userNotAuthenticatedLabel),
+                    CreatedAt = DateTime.UtcNow,
+                    SalesCategoryId = categoryId,
+                    BusinessUnitId = businessUnitId
+                };
+            }
+            else if (Id.HasValue)
+            {
+                try
+                {
+                    var loadedSale = await SalesService.GetSaleByIdAsync(Id.Value);
+                    if (loadedSale != null)
+                    {
+                        sale = new Models.SalesInvoice
+                        {
+                            Id = loadedSale.Id,
+                            InvoiceNumber = loadedSale.InvoiceNumber,
+                            InvoiceDate = loadedSale.InvoiceDate,
+                            InvoiceExpiryDate = loadedSale.InvoiceExpiryDate,
+                            BuyerId = loadedSale.BuyerId,
+                            BuyerCode = loadedSale.BuyerCode,
+                            BuyerName = loadedSale.BuyerName,
+                            IsCancelled = loadedSale.IsCancelled,
+                            CancellationReason = loadedSale.CancellationReason,
+                            IsPosted = loadedSale.IsPosted,
+                            PostedDate = loadedSale.PostedDate,
+                            CreatedByUserId = loadedSale.CreatedByUserId,
+                            CreatedAt = loadedSale.CreatedAt,
+                            LastModifiedByUserId = loadedSale.LastModifiedByUserId,
+                            LastModifiedAt = loadedSale.LastModifiedAt,
+                            SalesCategoryId = loadedSale.SalesCategoryId,
+                            BusinessUnitId = loadedSale.BusinessUnitId,
+                            TotalWithoutVAT = loadedSale.TotalWithoutVAT,
+                            TotalVATAmount = loadedSale.TotalVATAmount,
+                            TotalWithVAT = loadedSale.TotalWithVAT,
+                            TotalDiscountAmount = loadedSale.TotalDiscountAmount,
+                            Items = new List<SalesInvoiceItem>()
+                        };
+
+                        if (loadedSale.Items != null)
+                        {
+                            foreach (var sourceItem in loadedSale.Items)
+                            {
+                                var item = new SalesInvoiceItem
+                                {
+                                    Id = sourceItem.Id,
+                                    SalesInvoiceId = sourceItem.SalesInvoiceId,
+                                    ArticleId = sourceItem.ArticleId,
+                                    Barcode = sourceItem.Barcode,
+                                    ArticleCode = sourceItem.ArticleCode,
+                                    Description = sourceItem.Description,
+                                    Quantity = sourceItem.Quantity,
+                                    UnitId = sourceItem.UnitId,
+                                    UnitCode = sourceItem.UnitCode,
+                                    PriceWithoutVAT = sourceItem.PriceWithoutVAT,
+                                    PriceWithVAT = sourceItem.PriceWithVAT,
+                                    DiscountPercent = sourceItem.DiscountPercent,
+                                    DiscountAmount = sourceItem.DiscountAmount,
+                                    VATPercent = sourceItem.VATPercent,
+                                    VATAmount = sourceItem.VATAmount,
+                                    ValueWithoutVAT = sourceItem.ValueWithoutVAT,
+                                    ValueWithVAT = sourceItem.ValueWithVAT,
+                                    CurrencyId = sourceItem.CurrencyId,
+                                    CurrencyCode = sourceItem.CurrencyCode,
+                                    ExchangeRate = sourceItem.ExchangeRate
+                                };
+                                
+                                sale.Items.Add(item);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        await JSRuntime.InvokeVoidAsync("alert", invoiceNotFoundLabel);
+                        Navigation.NavigateTo("/sales");
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await JSRuntime.InvokeVoidAsync("console.error", "Error loading invoice", ex.Message);
+                    await JSRuntime.InvokeVoidAsync("alert", $"{errorLoadingInvoiceLabel}: {ex.Message}");
+                    Navigation.NavigateTo("/sales");
+                    return;
+                }
+            }
+
+            editContext = new EditContext(sale);
+            editContext.OnValidationStateChanged += ValidationStateChanged;
+
+            await LoadCategoryName();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error initializing page", ex.Message);
+            await JSRuntime.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
+    {
+        StateHasChanged();
+    }
+
+    private async Task HandleValidSubmit(EditContext context)
+    {
+        try
+        {
+            if (isSaving) return;
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (sale.BusinessUnitId <= 0)
+            {
+                var currentBusinessUnitId = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentBusinessUnit");
+                if (!string.IsNullOrEmpty(currentBusinessUnitId) && int.TryParse(currentBusinessUnitId, out var businessUnitId))
+                {
+                    sale.BusinessUnitId = businessUnitId;
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", noBusinessUnitSelectedLabel);
+                    Navigation.NavigateTo("/login");
+                    return;
+                }
+            }
+
+            if (!await ValidateInvoice()) return;
+
+            isSaving = true;
+            StateHasChanged();
+
+            try
+            {
+                if (!IsEdit)
+                {
+                    await SalesService.CreateSaleAsync(sale);
+                }
+                else
+                {
+                    await SalesService.UpdateSaleAsync(sale, userId);
+                }
+
+                // Check if this is Cash category and show payment modal
+                if (isCashCategory && !IsEdit)
+                {
+                    cashPaymentModel = new CashPaymentModel
+                    {
+                        Amount = sale.TotalWithVAT,
+                        Cash = 0,
+                        Bank = 0,
+                        Change = 0
+                    };
+                    
+                    showCashPaymentModal = true;
+                    isSaving = false;
+                    StateHasChanged();
+                    return;
+                }
+
+                // For non-cash categories or edits, proceed normally
+                var categories = await StateContainer.GetSalesCategoriesAsync();
+                var category = categories.FirstOrDefault(c => c.Id == sale.SalesCategoryId);
+                var categoryRoute = category?.Code != null ? GetCategoryRoute(category.Code) : "sales";
+
+                if (!IsEdit)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", invoiceCreatedSuccessfullyLabel);
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", invoiceUpdatedSuccessfullyLabel);
+                }
+
+                Navigation.NavigateTo($"/{categoryRoute}");
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"{errorLoadingInvoiceLabel}: {ex.Message}");
+            }
+            finally
+            {
+                isSaving = false;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"An error occurred: {ex.Message}");
+        }
+    }
+
+    private async Task GoBack()
+    {
+        try
+        {
+            var categories = await StateContainer.GetSalesCategoriesAsync();
+            var category = categories.FirstOrDefault(c => c.Id == sale.SalesCategoryId);
+            
+            if (category?.Code != null)
+            {
+                await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "currentSalesCategory", category.Code);
+                
+                var categoryRoute = GetCategoryRoute(category.Code);
+                Navigation.NavigateTo($"/{categoryRoute}");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "currentSalesCategory");
+                Navigation.NavigateTo("/sales");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "currentSalesCategory");
+            Navigation.NavigateTo("/sales");
+        }
+    }
+
+    private string GetCategoryRoute(string code)
+    {
+        return code.ToLower() switch
+        {
+            "dom" => "sales/domestic",
+            "cash" => "sales/cash",
+            "exp" => "sales/export",
+            "del" => "sales/delivery",
+            "serv" => "sales/service",
+            "cn" => "sales/credit-note",
+            "ret" => "sales/returns",
+            "other" => "sales/other",
+            "sum" => "sales/summary",
+            "print" => "sales/printing",
+            "bar" => "sales/barcode",
+            _ => "sales"
+        };
+    }
+
+    private async void ResetError()
+    {
+        errorBoundary?.Recover();
+        await LoadInvoice();
+    }
+
+    private void RemoveItem(SalesInvoiceItem item)
+    {
+        sale.Items.Remove(item);
+        RecalculateTotals();
+    }
+
+    private async Task HandleBuyerCodeChange(string buyerCode)
+    {
+        if (string.IsNullOrEmpty(buyerCode)) return;
+
+        var buyer = await SubjectService.GetSubjectByCodeAsync(buyerCode);
+        if (buyer != null)
+        {
+            sale.BuyerId = buyer.Id;
+            sale.BuyerCode = buyer.Code;
+            sale.BuyerName = buyer.SubjectName;
+        }
+    }
+
+    private async Task CalculateItemTotal(SalesInvoiceItem item)
+    {
+        try
+        {
+            if (item.PriceWithVAT <= 0 || item.Quantity <= 0) return;
+
+            item.PriceWithoutVAT = Math.Round(item.PriceWithVAT / (1 + (item.VATPercent / 100)), 2);
+            item.ValueWithoutVAT = Math.Round(item.Quantity * item.PriceWithoutVAT, 2);
+            item.DiscountAmount = Math.Round(item.ValueWithoutVAT * (item.DiscountPercent / 100), 2);
+            decimal netValueAfterDiscount = item.ValueWithoutVAT - item.DiscountAmount;
+            item.VATAmount = Math.Round(netValueAfterDiscount * (item.VATPercent / 100), 2);
+
+            if (item.DiscountPercent == 0)
+            {
+                item.ValueWithVAT = item.Quantity * item.PriceWithVAT;
+            }
+            else
+            {
+                item.ValueWithVAT = netValueAfterDiscount + item.VATAmount;
+            }
+
+            RecalculateTotals();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", errorCalculatingTotalsLabel, ex.Message);
+        }
+    }
+
+    private async Task AddNewItem()
+    {
+        try
+        {
+            sale.Items ??= new List<SalesInvoiceItem>();
+            
+            var newItem = new SalesInvoiceItem
+            {
+                SalesInvoiceId = sale.Id,
+                Quantity = 1,
+                CurrencyCode = "EUR",
+                ExchangeRate = 1,
+                VATPercent = 0,
+                DiscountPercent = 0,
+                PriceWithVAT = 0,
+                PriceWithoutVAT = 0,
+                ValueWithVAT = 0,
+                ValueWithoutVAT = 0,
+                DiscountAmount = 0,
+                VATAmount = 0,
+                ArticleId = 0,
+                ArticleCode = "",
+                Description = "",
+                UnitId = 0,
+                UnitCode = "",
+                CurrencyId = 0,
+                Barcode = ""
+            };
+            
+            sale.Items.Add(newItem);
+            
+            editContext = new EditContext(sale);
+            editContext.OnValidationStateChanged += ValidationStateChanged;
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", errorAddingNewItemLabel, ex.Message);
+        }
+    }
+
+    private void RecalculateTotals()
+    {
+        if (sale.Items == null || !sale.Items.Any())
+        {
+            sale.TotalWithoutVAT = 0;
+            sale.TotalDiscountAmount = 0;
+            sale.TotalVATAmount = 0;
+            sale.TotalWithVAT = 0;
+            return;
+        }
+
+        sale.TotalWithoutVAT = sale.Items.Sum(i => i.ValueWithoutVAT);
+        sale.TotalDiscountAmount = sale.Items.Sum(i => i.DiscountAmount);
+        sale.TotalVATAmount = sale.Items.Sum(i => i.VATAmount);
+        sale.TotalWithVAT = sale.Items.Sum(i => i.ValueWithVAT);
+    }
+
+    private async Task HandleBarcodeChange(SalesInvoiceItem item)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(item.Barcode)) return;
+
+            var article = await ArticleService.GetArticleByBarcodeAsync(item.Barcode);
+            if (article != null)
+            {
+                item.ArticleId = article.Id;
+                item.ArticleCode = article.Code;
+                item.Description = article.Description;
+                item.PriceWithVAT = article.Price;
+                item.UnitId = article.UnitId;
+                item.UnitCode = article.Unit?.Code ?? "";
+                item.VATPercent = article.VATTable?.VATRate ?? 0;
+                item.CurrencyId = article.CurrencyId;
+                item.CurrencyCode = article.Currency?.Code ?? "EUR";
+
+                if (item.Quantity <= 0) item.Quantity = 1;
+
+                await CalculateItemTotal(item);
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", errorLoadingArticleLabel, ex.Message);
+        }
+    }
+
+    private async Task HandleBuyerSearch(ChangeEventArgs e)
+    {
+        var searchTerm = e.Value?.ToString();
+        sale.BuyerName = searchTerm ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            buyerSearchResults.Clear();
+            showBuyerSearch = false;
+            return;
+        }
+
+        buyerSearchResults = await SubjectService.SearchBuyersAsync(searchTerm);
+        showBuyerSearch = true;
+        StateHasChanged();
+    }
+
+    private void SelectBuyer(Subject buyer)
+    {
+        if (buyer == null) return;
+
+        sale.BuyerId = buyer.Id;
+        sale.BuyerCode = buyer.Code;
+        sale.BuyerName = buyer.SubjectName;
+
+        showBuyerSearch = false;
+        buyerSearchResults.Clear();
+        StateHasChanged();
+    }
+
+    private async Task HandleDescriptionSearch(ChangeEventArgs e, SalesInvoiceItem item)
+    {
+        var searchTerm = e.Value?.ToString();
+        item.Description = searchTerm ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
+        {
+            articleSearchResults.Clear();
+            showArticleSearch = false;
+            return;
+        }
+
+        try
+        {
+            articleSearchResults = await ArticleService.SearchArticlesAsync(searchTerm);
+            showArticleSearch = articleSearchResults.Any();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", errorSearchingArticlesLabel, ex.Message);
+        }
+    }
+
+    private async Task<bool> ValidateInvoice()
+    {
+        if (sale.BuyerId <= 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", pleaseSelectBuyerLabel);
+            return false;
+        }
+
+        if (sale.BusinessUnitId <= 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", businessUnitRequiredLabel);
+            return false;
+        }
+
+        // **NEW: Return-specific validation**
+        if (isReturnCategory && sale.IsReturn)
+        {
+            if (sale.OriginalInvoiceId == null || sale.OriginalInvoiceId <= 0)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Please select an original invoice for the return.");
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(sale.ReturnReason))
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Please provide a reason for the return.");
+                return false;
+            }
+        }
+
+        if (sale.Items == null || !sale.Items.Any())
+        {
+            await JSRuntime.InvokeVoidAsync("alert", pleaseAddOneItemLabel);
+            return false;
+        }
+
+        foreach (var item in sale.Items)
+        {
+            if (item.ArticleId <= 0)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", allItemsValidArticleLabel);
+                return false;
+            }
+
+            if (item.Quantity <= 0)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", allItemsQuantityGreaterZeroLabel);
+                return false;
+            }
+
+            // **NEW: Validate return quantities**
+            if (isReturnCategory && item.OriginalInvoiceItemId.HasValue)
+            {
+                var returnableQty = GetReturnableQuantityForItem(item);
+                if (item.Quantity > returnableQty)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", $"Cannot return {item.Quantity} of '{item.Description}'. Only {returnableQty} available for return.");
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /*
+     * Comment for now
+     * Allow negative stocks for articles
+    private async Task<bool> ValidateStockAvailability()
+    {
+        if (sale.Items == null || !sale.Items.Any()) return true;
+
+        var stockRequests = sale.Items
+            .Where(item => item.ArticleId > 0)
+            .Select(item => (item.ArticleId, item.Quantity))
+            .ToList();
+
+        if (!stockRequests.Any()) return true;
+
+        try
+        {
+            var stockCheck = await ArticleService.CheckStockAvailabilityAsync(stockRequests);
+            var insufficientStock = stockCheck.Where(s => !s.hasEnoughStock).ToList();
+
+            if (insufficientStock.Any())
+            {
+                var errorMessage = "Insufficient stock for the following articles:\\n" +
+                    string.Join("\\n", insufficientStock.Select(s => 
+                        $"- {s.articleCode}: Available {s.availableStock}, Required {s.requestedStock}"));
+                
+                await JSRuntime.InvokeVoidAsync("alert", errorMessage);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error checking stock availability: {ex.Message}");
+            return false;
+        }
+    }
+     */
+
+    private async Task LoadCategoryName()
+    {
+        try
+        {
+            if (sale.SalesCategoryId > 0)
+            {
+                var categories = await StateContainer.GetSalesCategoriesAsync();
+                var category = categories.FirstOrDefault(c => c.Id == sale.SalesCategoryId);
+                if (category?.NameString?.StringKey != null)
+                {
+                    var languageId = await LocalizationService.GetDefaultLanguageId();
+                    currentCategoryName = LocalizationService.GetString(category.NameString.StringKey, languageId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", errorLoadingCategoryNameLabel, ex.Message);
+        }
+    }
+
+    private void SetActiveSearchItem(SalesInvoiceItem item)
+    {
+        activeSearchItem = item;
+    }
+
+    private async Task SelectArticle(Article article, SalesInvoiceItem item)
+    {
+        if (article == null || item == null) return;
+
+        try
+        {
+            item.ArticleId = article.Id;
+            item.ArticleCode = article.Code;
+            item.Description = article.Description;
+            item.Barcode = article.Barcode ?? "";
+            item.PriceWithVAT = article.Price;
+            item.UnitId = article.UnitId;
+            item.UnitCode = article.Unit?.Code ?? "";
+            item.VATPercent = article.VATTable?.VATRate ?? 0;
+            item.CurrencyId = article.CurrencyId;
+            item.CurrencyCode = article.Currency?.Code ?? "EUR";
+
+            if (item.Quantity <= 0) item.Quantity = 1;
+
+            showArticleSearch = false;
+            articleSearchResults.Clear();
+            activeSearchItem = null;
+
+            await CalculateItemTotal(item);
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", errorSelectingArticleLabel, ex.Message);
+        }
+    }
+
+    private async Task LoadLocalizationStrings()
+    {
+        var languageId = await LocalizationService.GetDefaultLanguageId();
+
+        createInvoiceLabel = LocalizationService.GetString("STRING_00097", languageId) ?? "Create Invoice";
+        editInvoiceLabel = LocalizationService.GetString("STRING_00098", languageId) ?? "Edit Invoice";
+        userNotAuthenticatedLabel = LocalizationService.GetString("STRING_00099", languageId) ?? "User is not authenticated";
+        invoiceNotFoundLabel = LocalizationService.GetString("STRING_00100", languageId) ?? "Invoice not found";
+        errorLoadingInvoiceLabel = LocalizationService.GetString("STRING_00101", languageId) ?? "Error loading invoice";
+        noBusinessUnitSelectedLabel = LocalizationService.GetString("STRING_00102", languageId) ?? "No business unit selected. Please log in again.";
+        invoiceCreatedSuccessfullyLabel = LocalizationService.GetString("STRING_00103", languageId) ?? "Invoice created successfully!";
+        invoiceUpdatedSuccessfullyLabel = LocalizationService.GetString("STRING_00104", languageId) ?? "Invoice updated successfully!";
+        errorCalculatingTotalsLabel = LocalizationService.GetString("STRING_00105", languageId) ?? "Error calculating totals";
+        errorAddingNewItemLabel = LocalizationService.GetString("STRING_00106", languageId) ?? "Error adding new item";
+        errorLoadingArticleLabel = LocalizationService.GetString("STRING_00107", languageId) ?? "Error loading article";
+        errorSearchingArticlesLabel = LocalizationService.GetString("STRING_00108", languageId) ?? "Error searching articles";
+        pleaseSelectBuyerLabel = LocalizationService.GetString("STRING_00109", languageId) ?? "Please select a buyer.";
+        businessUnitRequiredLabel = LocalizationService.GetString("STRING_00110", languageId) ?? "Business unit is required. Please log out and log in again.";
+        pleaseAddOneItemLabel = LocalizationService.GetString("STRING_00111", languageId) ?? "Please add at least one item.";
+        allItemsValidArticleLabel = LocalizationService.GetString("STRING_00112", languageId) ?? "All items must have a valid article.";
+        allItemsQuantityGreaterZeroLabel = LocalizationService.GetString("STRING_00113", languageId) ?? "All items must have a quantity greater than zero.";
+        errorLoadingCategoryNameLabel = LocalizationService.GetString("STRING_00114", languageId) ?? "Error loading category name";
+        errorSelectingArticleLabel = LocalizationService.GetString("STRING_00115", languageId) ?? "Error selecting article";
+        invoiceItemsLabel = LocalizationService.GetString("STRING_00116", languageId) ?? "Invoice Items";
+        saveInvoiceLabel = LocalizationService.GetString("STRING_00117", languageId) ?? "Save Invoice";
+        newInvoiceLabel = LocalizationService.GetString("STRING_00118", languageId) ?? "New Invoice";
+        invoiceDateLabel = LocalizationService.GetString("STRING_00119", languageId) ?? "Invoice Date";
+        expiryDateLabel = LocalizationService.GetString("STRING_00120", languageId) ?? "Expiry Date";
+        buyerNameLabel = LocalizationService.GetString("STRING_00121", languageId) ?? "Buyer Name";
+        addItemLabel = LocalizationService.GetString("STRING_00122", languageId) ?? "Add Item";
+        articleLabel = LocalizationService.GetString("STRING_00123", languageId) ?? "Article";
+        quantityLabel = LocalizationService.GetString("STRING_00124", languageId) ?? "QTY";
+        priceExclLabel = LocalizationService.GetString("STRING_00125", languageId) ?? "Price Excl.";
+        priceInclLabel = LocalizationService.GetString("STRING_00126", languageId) ?? "Price Incl.";
+        discPercentLabel = LocalizationService.GetString("STRING_00127", languageId) ?? "Disc. %";
+        discAmountLabel = LocalizationService.GetString("STRING_00128", languageId) ?? "Disc. Amount";
+        valueExclLabel = LocalizationService.GetString("STRING_00129", languageId) ?? "Value Excl.";
+        valueInclLabel = LocalizationService.GetString("STRING_00130", languageId) ?? "Value Incl.";
+        totalsLabel = LocalizationService.GetString("STRING_00131", languageId) ?? "Totals";
+        invoiceSummaryLabel = LocalizationService.GetString("STRING_00132", languageId) ?? "INVOICE SUMMARY";
+        subtotalBeforeDiscountLabel = LocalizationService.GetString("STRING_00133", languageId) ?? "Subtotal (before discount):";
+        totalDiscountsLabel = LocalizationService.GetString("STRING_00134", languageId) ?? "Total Discounts:";
+        totalVatLabel = LocalizationService.GetString("STRING_00135", languageId) ?? "Total VAT:";
+        totalDueLabel = LocalizationService.GetString("STRING_00136", languageId) ?? "TOTAL DUE:";
+        startTypingBuyerNameLabel = LocalizationService.GetString("STRING_00137", languageId) ?? "Start typing buyer name...";
+        noItemsAddedYetLabel = LocalizationService.GetString("STRING_00138", languageId) ?? "No items added yet.";
+        invoiceNumberLabel = LocalizationService.GetString("STRING_00139", languageId) ?? "Invoice #";
+        dateLabel = LocalizationService.GetString("STRING_00140", languageId) ?? "Date";
+        totalLabel = LocalizationService.GetString("STRING_00141", languageId) ?? "Total";
+        descriptionLabel = LocalizationService.GetString("STRING_00028", languageId) ?? "Description";
+        unitLabel = LocalizationService.GetString("STRING_00013", languageId) ?? "Unit";
+        backToSalesLabel = LocalizationService.GetString("STRING_00151", languageId) ?? "Back to Sales";
+        startTypingDescriptionLabel = LocalizationService.GetString("STRING_00143", languageId) ?? "Start typing description...";
+        backLabel = LocalizationService.GetString("STRING_00142", languageId) ?? "Back";
+
+        // Add Cash Payment Modal strings
+        cashPaymentModalTitleLabel = LocalizationService.GetString("STRING_00225", languageId) ?? "Cash Payment";
+        amountLabel = LocalizationService.GetString("STRING_00226", languageId) ?? "Amount";
+        cashLabel = LocalizationService.GetString("STRING_00227", languageId) ?? "Cash";
+        bankLabel = LocalizationService.GetString("STRING_00228", languageId) ?? "Bank";
+        changeLabel = LocalizationService.GetString("STRING_00229", languageId) ?? "Change";
+        okLabel = LocalizationService.GetString("STRING_00230", languageId) ?? "OK";
+        printReceiptLabel = LocalizationService.GetString("STRING_00231", languageId) ?? "Print Receipt";
+        cancelLabel = LocalizationService.GetString("STRING_00153", languageId) ?? "Cancel";
+
+        // **NEW: Return-specific localization strings**
+        returnReasonLabel = LocalizationService.GetString("STRING_00260", languageId) ?? "Return Reason";
+        originalInvoiceLabel = LocalizationService.GetString("STRING_00261", languageId) ?? "Original Invoice";
+        selectOriginalInvoiceLabel = LocalizationService.GetString("STRING_00262", languageId) ?? "Select Original Invoice";
+        searchOriginalInvoiceLabel = LocalizationService.GetString("STRING_00263", languageId) ?? "Search by invoice number or buyer...";
+        returnableQtyLabel = LocalizationService.GetString("STRING_00264", languageId) ?? "Returnable";
+        originalQtyLabel = LocalizationService.GetString("STRING_00265", languageId) ?? "Original";
+        maxReturnableLabel = LocalizationService.GetString("STRING_00266", languageId) ?? "Maximum returnable quantity";
+        createReturnLabel = LocalizationService.GetString("STRING_00267", languageId) ?? "Create Return";
+        returnCreatedSuccessfullyLabel = LocalizationService.GetString("STRING_00268", languageId) ?? "Return created successfully!";
+    }
+
+    private async Task OnPriceWithoutVatBlurAsync(SalesInvoiceItem item)
+    {
+        item.PriceWithoutVAT = Math.Round(item.PriceWithoutVAT, 2);
+        item.PriceWithVAT = Math.Round(item.PriceWithoutVAT * (1 + (item.VATPercent / 100)), 2);
+        await CalculateItemTotal(item);
+    }
+
+    private async Task CheckIfCashCategory()
+    {
+        try
+        {
+            var categories = await StateContainer.GetSalesCategoriesAsync();
+            var category = categories.FirstOrDefault(c => c.Id == sale.SalesCategoryId);
+            isCashCategory = category?.Code?.ToUpper() == "CASH";
+
+            // Initialize input values
+            cashInputValue = "0.00";
+            bankInputValue = "0.00";
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error checking category", ex.Message);
+            isCashCategory = false;
+        }
+    }
+
+    private async Task CheckIfReturnCategory()
+    {
+        try
+        {
+            var categories = await StateContainer.GetSalesCategoriesAsync();
+            var category = categories.FirstOrDefault(c => c.Id == sale.SalesCategoryId);
+            isReturnCategory = category?.Code?.ToUpper() == "RET";
+            
+            if (isReturnCategory)
+            {
+                sale.IsReturn = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error checking return category", ex.Message);
+            isReturnCategory = false;
+        }
+    }
+
+    // Cash Payment Modal methods
+    private void CalculateChange()
+    {
+        var totalPaid = cashPaymentModel.Cash + cashPaymentModel.Bank;
+        cashPaymentModel.Change = Math.Round(totalPaid - cashPaymentModel.Amount, 2);
+
+        StateHasChanged();
+    }
+
+    private async Task CloseCashPaymentModal()
+    {
+        showCashPaymentModal = false;
+        cashPaymentModel = new CashPaymentModel();
+        cashInputValue = "0.00";
+        bankInputValue = "0.00";
+
+        // Reset to a clean new invoice state
+        await ResetToNewInvoice();
+    }
+
+    private async Task ProcessCashPayment()
+    {
+        try
+        {
+            // Hide modal first
+            showCashPaymentModal = false;
+            StateHasChanged();
+
+            // Print the invoice
+            await JSRuntime.InvokeVoidAsync("window.print");
+
+            // Reset to a clean new invoice state instead of just navigating
+            await ResetToNewInvoice();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error processing payment: {ex.Message}");
+        }
+    }
+
+    // Add this new method to reset the invoice to a clean state
+    private async Task ResetToNewInvoice()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            var currentBusinessUnitId = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentBusinessUnit");
+            int businessUnitId = 0;
+
+            if (!string.IsNullOrEmpty(currentBusinessUnitId) && int.TryParse(currentBusinessUnitId, out businessUnitId))
+            {
+                // For cash invoices, always use category ID 2 (cash) when resetting
+                var categoryId = 2; // Force cash category ID
+
+                // Create a completely fresh invoice
+                sale = new Models.SalesInvoice
+                {
+                    InvoiceDate = DateTime.Now,
+                    InvoiceExpiryDate = null,
+                    Items = new List<SalesInvoiceItem>(),
+                    CreatedByUserId = userId ?? throw new InvalidOperationException(userNotAuthenticatedLabel),
+                    CreatedAt = DateTime.UtcNow,
+                    SalesCategoryId = categoryId,
+                    BusinessUnitId = businessUnitId,
+                    // Ensure all other fields are in default state
+                    BuyerId = 0,
+                    BuyerCode = "",
+                    BuyerName = "",
+                    TotalWithoutVAT = 0,
+                    TotalVATAmount = 0,
+                    TotalWithVAT = 0,
+                    TotalDiscountAmount = 0
+                };
+
+                // Reset search states
+                buyerSearchResults.Clear();
+                showBuyerSearch = false;
+                articleSearchResults.Clear();
+                showArticleSearch = false;
+                activeSearchItem = null;
+
+                // Reset cash payment modal state
+                showCashPaymentModal = false;
+                cashPaymentModel = new CashPaymentModel();
+                cashInputValue = "0.00";
+                bankInputValue = "0.00";
+
+                // Create new edit context
+                editContext = new EditContext(sale);
+                editContext.OnValidationStateChanged += ValidationStateChanged;
+
+                // Reload category info
+                await LoadCategoryName();
+                await CheckIfCashCategory();
+
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error resetting invoice", ex.Message);
+        }
+    }
+
+    // **NEW: Handle original invoice search**
+    private async Task HandleOriginalInvoiceSearch(ChangeEventArgs e)
+    {
+        originalInvoiceSearchTerm = e.Value?.ToString() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(originalInvoiceSearchTerm))
+        {
+            originalInvoiceSearchResults.Clear();
+            showOriginalInvoiceSearch = false;
+            return;
+        }
+
+        try
+        {
+            var currentBusinessUnitId = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentBusinessUnit");
+            if (int.TryParse(currentBusinessUnitId, out var businessUnitId))
+            {
+                originalInvoiceSearchResults = await SalesService.GetPostedInvoicesForReturnAsync(businessUnitId, originalInvoiceSearchTerm);
+                showOriginalInvoiceSearch = originalInvoiceSearchResults.Any();
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error searching original invoices", ex.Message);
+        }
+    }
+
+    // **NEW: Select original invoice**
+    private void SelectOriginalInvoice(Models.SalesInvoice originalInvoice)
+    {
+        selectedOriginalInvoice = originalInvoice;
+        sale.OriginalInvoiceId = originalInvoice.Id;
+        sale.OriginalInvoiceNumber = originalInvoice.InvoiceNumber;
+        
+        // Set buyer information from original invoice
+        sale.BuyerId = originalInvoice.BuyerId;
+        sale.BuyerCode = originalInvoice.BuyerCode;
+        sale.BuyerName = originalInvoice.BuyerName;
+
+        showOriginalInvoiceSearch = false;
+        originalInvoiceSearchResults.Clear();
+        StateHasChanged();
+    }
+
+    // **NEW: Load original invoice items for return**
+    private async Task LoadOriginalInvoiceItems()
+    {
+        if (selectedOriginalInvoice?.Items == null) return;
+
+        try
+        {
+            sale.Items.Clear();
+
+            foreach (var originalItem in selectedOriginalInvoice.Items)
+            {
+                var returnableQty = await SalesService.GetReturnableQuantityAsync(originalItem.Id);
+                
+                if (returnableQty > 0)
+                {
+                    var returnItem = new SalesInvoiceItem
+                    {
+                        SalesInvoiceId = sale.Id,
+                        ArticleId = originalItem.ArticleId,
+                        Barcode = originalItem.Barcode,
+                        ArticleCode = originalItem.ArticleCode,
+                        Description = originalItem.Description,
+                        Quantity = 0, // User will specify return quantity
+                        OriginalQuantity = originalItem.Quantity,
+                        OriginalInvoiceItemId = originalItem.Id,
+                        UnitId = originalItem.UnitId,
+                        UnitCode = originalItem.UnitCode,
+                        PriceWithoutVAT = originalItem.PriceWithoutVAT,
+                        PriceWithVAT = originalItem.PriceWithVAT,
+                        VATPercent = originalItem.VATPercent,
+                        DiscountPercent = originalItem.DiscountPercent,
+                        CurrencyId = originalItem.CurrencyId,
+                        CurrencyCode = originalItem.CurrencyCode,
+                        ExchangeRate = originalItem.ExchangeRate,
+                        ReturnableQuantity = returnableQty // **NEW: Set this property**
+                    };
+
+                    sale.Items.Add(returnItem);
+                }
+            }
+
+            RecalculateTotals();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error loading original items: {ex.Message}");
+        }
+    }
+
+    private decimal GetReturnableQuantityForItem(SalesInvoiceItem item)
+    {
+        if (!item.OriginalInvoiceItemId.HasValue) return 0;
+        
+        // Store the returnable quantity in the item when loading original items
+        // This way we don't need to make async calls in the rendering
+        return item.ReturnableQuantity; // ReturnableQuantity is a non-nullable decimal
+    }
+
+    private void ResetFormFields()
+    {
+        sale = new Models.SalesInvoice
+        {
+            InvoiceDate = DateTime.Now,
+            Items = new List<SalesInvoiceItem>(),
+            TotalWithoutVAT = 0,
+            TotalVATAmount = 0,
+            TotalWithVAT = 0,
+            TotalDiscountAmount = 0
+        };
+
+        isSaving = false;
+        showCashPaymentModal = false;
+        cashPaymentModel = new CashPaymentModel();
+        cashInputValue = "0.00";
+        bankInputValue = "0.00";
+
+        buyerSearchResults.Clear();
+        articleSearchResults.Clear();
+        activeSearchItem = null;
+
+        editContext = new EditContext(sale);
+        editContext.OnValidationStateChanged += ValidationStateChanged;
+    }
+
+    public class CashPaymentModel
+    {
+        public decimal Amount { get; set; }
+        public decimal Cash { get; set; }
+        public decimal Bank { get; set; }
+        public decimal Change { get; set; }
+
+        public CashPaymentModel()
+        {
+            Amount = 0;
+            Cash = 0;
+            Bank = 0;
+            Change = 0;
+        }
+    }
+    private void HandleCashInputChange(ChangeEventArgs e)
+    {
+        var input = e.Value?.ToString() ?? "";
+        cashInputValue = ValidateAndFormatNumericInput(input);
+        
+        if (decimal.TryParse(cashInputValue, out var cashValue))
+        {
+            cashPaymentModel.Cash = Math.Round(cashValue, 2);
+        }
+        else
+        {
+            cashPaymentModel.Cash = 0;
+        }
+        
+        CalculateChange();
+        StateHasChanged();
+    }
+
+    private void HandleBankInputChange(ChangeEventArgs e)
+    {
+        var input = e.Value?.ToString() ?? "";
+        bankInputValue = ValidateAndFormatNumericInput(input);
+        
+        if (decimal.TryParse(bankInputValue, out var bankValue))
+        {
+            cashPaymentModel.Bank = Math.Round(bankValue, 2);
+        }
+        else
+        {
+            cashPaymentModel.Bank = 0;
+        }
+        
+        CalculateChange();
+        StateHasChanged();
+    }
+
+    private string ValidateAndFormatNumericInput(string input)
+    {
+        var cleanInput = "";
+        var decimalFound = false;
+        var decimalPlaces = 0;
+
+        foreach (char c in input)
+        {
+            if (char.IsDigit(c))
+            {
+                if (decimalFound && decimalPlaces >= 2)
+                    break; // Limit to 2 decimal places
+                
+                cleanInput += c;
+                if (decimalFound) decimalPlaces++;
+            }
+            else if (c == '.' && !decimalFound && cleanInput.Length > 0)
+            {
+                cleanInput += c;
+                decimalFound = true;
+            }
+        }
+
+        return cleanInput;
+    }
+
+    // Format quantity to show clean numbers (no unnecessary decimals)
+    private string FormatQuantity(decimal quantity)
+    {
+        // If it's a whole number, show without decimals
+        if (quantity == Math.Floor(quantity))
+        {
+            return quantity.ToString("0");
+        }
+        // Otherwise show up to 2 decimal places, removing trailing zeros
+        return quantity.ToString("0.##");
+    }
+
+    // Handle quantity input changes
+    private void HandleQuantityInput(ChangeEventArgs e, SalesInvoiceItem item)
+    {
+        var input = e.Value?.ToString() ?? "";
+        
+        if (decimal.TryParse(input, out var quantity) && quantity > 0)
+        {
+            item.Quantity = quantity;
+        }
+        else if (string.IsNullOrEmpty(input))
+        {
+            item.Quantity = 1; // Default to 1 if empty
+        }
+        
+        StateHasChanged();
+    }
+}

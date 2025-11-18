@@ -1,0 +1,321 @@
+﻿@page "/login"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using Services
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
+@inject BusinessUnitService BusinessUnitService
+@inject IJSRuntime JSRuntime
+@attribute [AllowAnonymous]
+
+<div class="login-container">
+    <div class="login-box">
+        <h3 class="text-center mb-4">Accounting System</h3>
+
+        <EditForm Model="@loginModel" OnValidSubmit="@HandleValidSubmit" OnInvalidSubmit="@HandleInvalidSubmit">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label class="form-label">Username</label>
+                <InputText @bind-Value="loginModel.Username" class="form-control" placeholder="Enter your username" />
+                <ValidationMessage For="@(() => loginModel.Username)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <InputText type="password" @bind-Value="loginModel.Password" class="form-control" placeholder="Enter your password" />
+                <ValidationMessage For="@(() => loginModel.Password)" />
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <InputCheckbox @bind-Value="loginModel.RememberMe" class="form-check-input" id="rememberMe" />
+                    <label class="form-check-label" for="rememberMe">Remember Me</label>
+                </div>
+            </div>
+
+            @if (showBusinessUnitSelect)
+            {
+                <div class="mb-3">
+                    <label class="form-label">Business Unit</label>
+                    <select @bind="selectedBusinessUnitId" class="form-control">
+                        <option value="">Select Business Unit</option>
+                        @foreach (var unit in availableBusinessUnits)
+                        {
+                            <option value="@unit.Id">@unit.Name</option>
+                        }
+                    </select>
+                    @if (string.IsNullOrEmpty(selectedBusinessUnitId))
+                    {
+                        <div class="text-danger"><small>Please select a business unit</small></div>
+                    }
+                </div>
+
+                <button type="button" class="btn btn-success w-100 mb-2" @onclick="HandleBusinessUnitSelection">
+                    Continue with Selected Business Unit
+                </button>
+
+                <button type="button" class="btn btn-secondary w-100" @onclick="GoBackToLogin">
+                    Back to Login
+                </button>
+            }
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">@errorMessage</div>
+            }
+
+            <button type="submit" class="btn btn-primary w-100" disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                }
+                Login
+            </button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private LoginViewModel loginModel = new();
+    private string? errorMessage;
+    private bool isSaving;
+    private bool showBusinessUnitSelect;
+    private List<BusinessUnit> availableBusinessUnits = new();
+    private EditContext editContext = null!;
+    private string selectedBusinessUnitId = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        editContext = new EditContext(loginModel);
+
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var error = query["error"];
+
+        if (!string.IsNullOrEmpty(error))
+        {
+            errorMessage = error switch
+            {
+                "failed" => "Login failed. Please check your credentials.",
+                "missing" => "Username and password are required.",
+                "exception" => "An error occurred during login. Please try again.",
+                _ => "An unknown error occurred."
+            };
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            isSaving = true;
+            errorMessage = null;
+            StateHasChanged();
+
+            if (string.IsNullOrWhiteSpace(loginModel.Username))
+            {
+                errorMessage = "Username is required";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(loginModel.Password))
+            {
+                errorMessage = "Password is required";
+                return;
+            }
+
+            var user = await UserManager.FindByNameAsync(loginModel.Username);
+            if (user == null)
+            {
+                errorMessage = "Invalid username or password.";
+                return;
+            }
+
+            var passwordValid = await UserManager.CheckPasswordAsync(user, loginModel.Password);
+            if (!passwordValid)
+            {
+                errorMessage = "Invalid username or password.";
+                return;
+            }
+
+            var emailConfirmed = await UserManager.IsEmailConfirmedAsync(user);
+            if (!emailConfirmed)
+            {
+                errorMessage = "Email address is not confirmed. Please check your email for the confirmation link or contact your administrator.";
+                return;
+            }
+
+            var isAdmin = await UserManager.IsInRoleAsync(user, "Admin");
+            availableBusinessUnits = await BusinessUnitService.GetUserBusinessUnitsAsync(user.Id, isAdmin);
+
+            if (!availableBusinessUnits.Any())
+            {
+                errorMessage = "No business units assigned to this user. Please contact an administrator.";
+                return;
+            }
+
+            if (availableBusinessUnits.Count == 1)
+            {
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "currentBusinessUnit", availableBusinessUnits[0].Id.ToString());
+                await PerformSignIn();
+            }
+            else
+            {
+                showBusinessUnitSelect = true;
+                StateHasChanged();
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred during login: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleBusinessUnitSelection()
+    {
+        if (!string.IsNullOrEmpty(selectedBusinessUnitId))
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "currentBusinessUnit", selectedBusinessUnitId);
+                await PerformSignIn();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error: {ex.Message}";
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            errorMessage = "Please select a business unit.";
+            StateHasChanged();
+        }
+    }
+
+    private void GoBackToLogin()
+    {
+        showBusinessUnitSelect = false;
+        selectedBusinessUnitId = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task PerformSignIn()
+    {
+        // Use the client-side form POST so the server can set the cookie on the HTTP response.
+        await JSRuntime.InvokeVoidAsync("submitLoginForm", loginModel.Username, loginModel.Password, loginModel.RememberMe);
+    }
+
+    private async Task HandleInvalidSubmit()
+    {
+        errorMessage = $"Form validation failed: {string.Join(", ", editContext.GetValidationMessages())}";
+        await Task.CompletedTask;
+    }
+
+    public class LoginViewModel
+    {
+        [Required]
+        public string Username { get; set; } = string.Empty;
+
+        [Required]
+        public string Password { get; set; } = string.Empty;
+
+        public bool RememberMe { get; set; }
+    }
+}
+
+<style>
+    .login-container {
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+        padding: 20px;
+    }
+
+    .login-box {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 0.95rem;
+    }
+
+        .form-control:focus {
+            border-color: #1a237e;
+            box-shadow: 0 0 0 0.2rem rgba(26, 35, 126, 0.25);
+        }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        font-weight: 500;
+    }
+
+    h3 {
+        color: #1a237e;
+        font-weight: 600;
+        margin-bottom: 2rem;
+    }
+</style>
+
+<script>
+    window.submitLoginForm = function(username, password, rememberMe) {
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/Account/Login';
+
+        var usernameInput = document.createElement('input');
+        usernameInput.type = 'hidden';
+        usernameInput.name = 'username';
+        usernameInput.value = username;
+        form.appendChild(usernameInput);
+
+        var passwordInput = document.createElement('input');
+        passwordInput.type = 'hidden';
+        passwordInput.name = 'password';
+        passwordInput.value = password;
+        form.appendChild(passwordInput);
+
+        var rememberMeInput = document.createElement('input');
+        rememberMeInput.type = 'hidden';
+        rememberMeInput.name = 'rememberMe';
+        rememberMeInput.value = rememberMe.toString();
+        form.appendChild(rememberMeInput);
+
+        var returnUrlInput = document.createElement('input');
+        returnUrlInput.type = 'hidden';
+        returnUrlInput.name = 'returnUrl';
+        returnUrlInput.value = '/';
+        form.appendChild(returnUrlInput);
+
+        document.body.appendChild(form);
+        form.submit();
+    };
+</script>

@@ -1,0 +1,106 @@
+﻿@using Accounting.Services
+@using System.Security.Claims
+@inject BusinessUnitService BusinessUnitService
+@inject BusinessUnitStateContainer StateContainer
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<h3>BusinessUnitSelector</h3>
+
+<div class="business-unit-selector">
+    @if (businessUnits == null)
+    {
+        <span>Loading...</span>
+    }
+    else if (!businessUnits.Any())
+    {
+        <span class="text-danger">No business units assigned</span>
+    }
+    else if (businessUnits.Count == 1)
+    {
+        <span class="current-unit">@businessUnits.First().Name</span>
+    }
+    else
+    {
+        <select class="form-select" value="@StateContainer.CurrentBusinessUnitId" @onchange="OnBusinessUnitChanged">
+            <option value="">Select Business Unit</option>
+            @foreach (var unit in businessUnits)
+            {
+                <option value="@unit.Id">@unit.Name</option>
+            }
+        </select>
+    }
+</div>
+
+@code {
+    private List<BusinessUnit>? businessUnits;
+    private bool isAdmin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        
+        isAdmin = user.IsInRole("Admin");
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (userId != null)
+        {
+            businessUnits = await BusinessUnitService.GetUserBusinessUnitsAsync(userId, isAdmin);
+            
+            if (businessUnits.Count == 1)
+            {
+                await SetBusinessUnit(businessUnits.First().Id);
+            }
+        }
+    }
+
+    private async Task OnBusinessUnitChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int businessUnitId))
+        {
+            await SetBusinessUnit(businessUnitId);
+        }
+    }
+
+    private async Task SetBusinessUnit(int businessUnitId)
+    {
+        StateContainer.CurrentBusinessUnitId = businessUnitId;
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "currentBusinessUnit", businessUnitId);
+    }
+}
+
+<style>
+    .business-unit-selector {
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+        background-color: rgba(255,255,255,0.1);
+        border-radius: 4px;
+    }
+
+    .current-unit {
+        display: block;
+        padding: 0.5rem;
+        color: white;
+        font-weight: 500;
+    }
+
+    .form-select {
+        background-color: rgba(255,255,255,0.9);
+        border: none;
+        border-radius: 4px;
+        padding: 0.5rem;
+        width: 100%;
+        color: #333;
+    }
+
+    .form-select:focus {
+        box-shadow: 0 0 0 2px rgba(255,255,255,0.5);
+        outline: none;
+    }
+
+    .text-danger {
+        color: #ff6b6b !important;
+    }
+</style>
