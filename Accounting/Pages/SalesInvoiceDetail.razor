@@ -88,6 +88,20 @@
                                         <td class="text-muted">@createdAtLabel:</td>
                                         <td>@invoice.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
                                     </tr>
+                                    @if (invoice.IsReturn && !string.IsNullOrEmpty(invoice.OriginalInvoiceNumber))
+                                    {
+                                        <tr>
+                                            <td class="text-muted">@originalInvoiceLabel:</td>
+                                            <td>@invoice.OriginalInvoiceNumber</td>        
+                                        </tr>
+                                    }
+                                    @if (invoice.IsReturn && !string.IsNullOrEmpty(invoice.ReturnReason))
+                                    {
+                                        <tr>
+                                            <td class="text-muted">@returnReasonLabel:</td>
+                                            <td class="text-warning">@invoice.ReturnReason</td>
+                                        </tr>
+                                    }
                                     @if (invoice.LastModifiedAt.HasValue)
                                     {
                                         <tr>
@@ -495,6 +509,8 @@ else
     private string buyerNameLabel = string.Empty;
     private string lastModifiedLabel = string.Empty;
     private string cancellationReasonLabel = string.Empty;
+    private string originalInvoiceLabel = string.Empty;
+    private string returnReasonLabel = string.Empty;
     private string allSalesLabel = string.Empty;
     private string backToSalesLabel = string.Empty;
     private string postInvoiceLabel = string.Empty;
@@ -605,6 +621,9 @@ else
         draftLabel = LocalizationService.GetString("STRING_00158", languageId) ?? "Draft";
         cancelledLabel = LocalizationService.GetString("STRING_00156", languageId) ?? "Cancelled";
         postedLabel = LocalizationService.GetString("STRING_00157", languageId) ?? "Posted";
+        
+        originalInvoiceLabel = LocalizationService.GetString("STRING_00233", languageId) ?? "Original Invoice";
+        returnReasonLabel = LocalizationService.GetString("STRING_00232", languageId) ?? "Return Reason";
     }
 
     private async Task GoBack()

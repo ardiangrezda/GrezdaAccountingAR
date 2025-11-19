@@ -112,7 +112,7 @@ namespace Accounting.Services
                     .ThenInclude(item => item.Unit)
                 .FirstOrDefaultAsync(s => s.InvoiceNumber == invoiceNumber && 
                                         s.BusinessUnitId == businessUnitId && 
-                                        s.IsPosted && 
+                                        // s.IsPosted &&  // COMMENTED OUT FOR TESTING
                                         !s.IsCancelled && 
                                         !s.IsReturn);
         }

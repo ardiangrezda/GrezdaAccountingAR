@@ -541,34 +541,38 @@
                                                 </div>
                                                 <div class="card-body">
                                                     <div class="row">
-                                                        <!-- Original Invoice Selection -->
+                                                        <!-- Original Invoice Number Input -->
                                                         <div class="col-md-6">
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">@originalInvoiceLabel *</label>
-                                                                <div class="position-relative">
+                                                                <div class="input-group">
                                                                     <input type="text" 
                                                                            class="form-control" 
                                                                            placeholder="@searchOriginalInvoiceLabel"
                                                                            value="@originalInvoiceSearchTerm"
-                                                                           @oninput="HandleOriginalInvoiceSearch" />
-                                                                    @if (showOriginalInvoiceSearch && originalInvoiceSearchResults.Any())
-                                                                    {
-                                                                        <div class="search-dropdown">
-                                                                            @foreach (var invoice in originalInvoiceSearchResults)
-                                                                            {
-                                                                                <div class="buyer-item" @onclick="() => SelectOriginalInvoice(invoice)">
-                                                                                    <div class="fw-bold">@invoice.InvoiceNumber</div>
-                                                                                    <div class="text-muted small">@invoice.BuyerName - @invoice.InvoiceDate.ToShortDateString() - @invoice.TotalWithVAT.ToString("N2")</div>
-                                                                                </div>
-                                                                            }
-                                                                        </div>
-                                                                    }
+                                                                           @oninput="HandleOriginalInvoiceNumberInput"
+                                                                           @onkeydown="HandleInvoiceNumberKeyDown" />
+                                                                    <button type="button" 
+                                                                            class="btn btn-primary" 
+                                                                            @onclick="LoadInvoiceByNumber"
+                                                                            disabled="@(string.IsNullOrWhiteSpace(originalInvoiceSearchTerm))">
+                                                                        <i class="fas fa-search me-1"></i>Load
+                                                                    </button>
                                                                 </div>
+                                                                <small class="text-muted">Enter invoice number (e.g., 25-DOM-005-0001) and press Enter or click Load</small>
+                                                                
                                                                 @if (selectedOriginalInvoice != null)
                                                                 {
                                                                     <div class="mt-2 p-2 bg-success-subtle border border-success rounded">
                                                                         <strong>Selected:</strong> @selectedOriginalInvoice.InvoiceNumber<br/>
-                                                                        <small>@selectedOriginalInvoice.BuyerName - @selectedOriginalInvoice.InvoiceDate.ToShortDateString()</small>
+                                                                        <small>@selectedOriginalInvoice.BuyerName - @selectedOriginalInvoice.InvoiceDate.ToShortDateString() - @selectedOriginalInvoice.TotalWithVAT.ToString("N2")</small>
+                                                                    </div>
+                                                                }
+                                                                @if (showInvoiceNotFoundError)
+                                                                {
+                                                                    <div class="mt-2 p-2 bg-danger-subtle border border-danger rounded text-danger">
+                                                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                                                        Invoice "@originalInvoiceSearchTerm" not found or cannot be returned.
                                                                     </div>
                                                                 }
                                                             </div>
@@ -587,7 +591,7 @@
                                                         </div>
                                                     </div>
 
-                                                    @if (selectedOriginalInvoice != null)
+                                                    @if (selectedOriginalInvoice != null && sale.Items?.Count == 0)
                                                     {
                                                         <div class="row">
                                                             <div class="col-12">
@@ -830,14 +834,13 @@
     private string cashInputValue = "0.00";
     private string bankInputValue = "0.00";
 
-    // **NEW: Return-specific properties**
     private bool isReturnCategory = false;
     private string originalInvoiceSearchTerm = string.Empty;
     private List<Models.SalesInvoice> originalInvoiceSearchResults = new();
     private bool showOriginalInvoiceSearch = false;
     private Models.SalesInvoice? selectedOriginalInvoice = null;
+    private bool showInvoiceNotFoundError = false;
 
-    // **NEW: Return localization strings**
     private string returnReasonLabel = string.Empty;
     private string originalInvoiceLabel = string.Empty;
     private string selectOriginalInvoiceLabel = string.Empty;
@@ -1369,7 +1372,6 @@
             return false;
         }
 
-        // **NEW: Return-specific validation**
         if (isReturnCategory && sale.IsReturn)
         {
             if (sale.OriginalInvoiceId == null || sale.OriginalInvoiceId <= 0)
@@ -1391,27 +1393,52 @@
             return false;
         }
 
-        foreach (var item in sale.Items)
+        // For regular invoices, all items must have quantity > 0
+        if (isReturnCategory)
         {
-            if (item.ArticleId <= 0)
+            // For returns: At least ONE item must have quantity > 0
+            var itemsWithQuantity = sale.Items.Where(i => i.Quantity > 0).ToList();
+            if (!itemsWithQuantity.Any())
             {
-                await JSRuntime.InvokeVoidAsync("alert", allItemsValidArticleLabel);
+                await JSRuntime.InvokeVoidAsync("alert", "Please specify a quantity greater than zero for at least one item to return.");
                 return false;
             }
 
-            if (item.Quantity <= 0)
+            // Validate only items being returned (quantity > 0)
+            foreach (var item in itemsWithQuantity)
             {
-                await JSRuntime.InvokeVoidAsync("alert", allItemsQuantityGreaterZeroLabel);
-                return false;
-            }
-
-            // **NEW: Validate return quantities**
-            if (isReturnCategory && item.OriginalInvoiceItemId.HasValue)
-            {
-                var returnableQty = GetReturnableQuantityForItem(item);
-                if (item.Quantity > returnableQty)
+                if (item.ArticleId <= 0)
                 {
-                    await JSRuntime.InvokeVoidAsync("alert", $"Cannot return {item.Quantity} of '{item.Description}'. Only {returnableQty} available for return.");
+                    await JSRuntime.InvokeVoidAsync("alert", allItemsValidArticleLabel);
+                    return false;
+                }
+
+                // Validate return quantities
+                if (item.OriginalInvoiceItemId.HasValue)
+                {
+                    var returnableQty = GetReturnableQuantityForItem(item);
+                    if (item.Quantity > returnableQty)
+                    {
+                        await JSRuntime.InvokeVoidAsync("alert", $"Cannot return {item.Quantity} of '{item.Description}'. Only {returnableQty} available for return.");
+                        return false;
+                    }
+                }
+            }
+        }
+        else
+        {
+            // For regular invoices: ALL items must have quantity > 0 and valid article
+            foreach (var item in sale.Items)
+            {
+                if (item.ArticleId <= 0)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", allItemsValidArticleLabel);
+                    return false;
+                }
+
+                if (item.Quantity <= 0)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", allItemsQuantityGreaterZeroLabel);
                     return false;
                 }
             }
@@ -1583,16 +1610,15 @@
         printReceiptLabel = LocalizationService.GetString("STRING_00231", languageId) ?? "Print Receipt";
         cancelLabel = LocalizationService.GetString("STRING_00153", languageId) ?? "Cancel";
 
-        // **NEW: Return-specific localization strings**
-        returnReasonLabel = LocalizationService.GetString("STRING_00260", languageId) ?? "Return Reason";
-        originalInvoiceLabel = LocalizationService.GetString("STRING_00261", languageId) ?? "Original Invoice";
-        selectOriginalInvoiceLabel = LocalizationService.GetString("STRING_00262", languageId) ?? "Select Original Invoice";
-        searchOriginalInvoiceLabel = LocalizationService.GetString("STRING_00263", languageId) ?? "Search by invoice number or buyer...";
-        returnableQtyLabel = LocalizationService.GetString("STRING_00264", languageId) ?? "Returnable";
-        originalQtyLabel = LocalizationService.GetString("STRING_00265", languageId) ?? "Original";
-        maxReturnableLabel = LocalizationService.GetString("STRING_00266", languageId) ?? "Maximum returnable quantity";
-        createReturnLabel = LocalizationService.GetString("STRING_00267", languageId) ?? "Create Return";
-        returnCreatedSuccessfullyLabel = LocalizationService.GetString("STRING_00268", languageId) ?? "Return created successfully!";
+        returnReasonLabel = LocalizationService.GetString("STRING_00232", languageId) ?? "Return Reason";
+        originalInvoiceLabel = LocalizationService.GetString("STRING_00233", languageId) ?? "Original Invoice";
+        selectOriginalInvoiceLabel = LocalizationService.GetString("STRING_00234", languageId) ?? "Select Original Invoice";
+        searchOriginalInvoiceLabel = LocalizationService.GetString("STRING_00235", languageId) ?? "Search by invoice number or buyer...";
+        returnableQtyLabel = LocalizationService.GetString("STRING_00236", languageId) ?? "Returnable";
+        originalQtyLabel = LocalizationService.GetString("STRING_00237", languageId) ?? "Original";
+        maxReturnableLabel = LocalizationService.GetString("STRING_00238", languageId) ?? "Maximum returnable quantity";
+        createReturnLabel = LocalizationService.GetString("STRING_00239", languageId) ?? "Create Return";
+        returnCreatedSuccessfullyLabel = LocalizationService.GetString("STRING_00240", languageId) ?? "Return created successfully!";
     }
 
     private async Task OnPriceWithoutVatBlurAsync(SalesInvoiceItem item)
@@ -1747,35 +1773,67 @@
         }
     }
 
-    // **NEW: Handle original invoice search**
-    private async Task HandleOriginalInvoiceSearch(ChangeEventArgs e)
+    private void HandleOriginalInvoiceNumberInput(ChangeEventArgs e)
     {
         originalInvoiceSearchTerm = e.Value?.ToString() ?? string.Empty;
+        showInvoiceNotFoundError = false; // Reset error when user types
+        StateHasChanged();
+    }
 
-        if (string.IsNullOrWhiteSpace(originalInvoiceSearchTerm))
+    private async Task HandleInvoiceNumberKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(originalInvoiceSearchTerm))
         {
-            originalInvoiceSearchResults.Clear();
-            showOriginalInvoiceSearch = false;
-            return;
+            await LoadInvoiceByNumber();
         }
+    }
+
+    private async Task LoadInvoiceByNumber()
+    {
+        if (string.IsNullOrWhiteSpace(originalInvoiceSearchTerm))
+            return;
 
         try
         {
+            showInvoiceNotFoundError = false;
+            
             var currentBusinessUnitId = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentBusinessUnit");
             if (int.TryParse(currentBusinessUnitId, out var businessUnitId))
             {
-                originalInvoiceSearchResults = await SalesService.GetPostedInvoicesForReturnAsync(businessUnitId, originalInvoiceSearchTerm);
-                showOriginalInvoiceSearch = originalInvoiceSearchResults.Any();
+                // Use the exact invoice number search
+                var invoice = await SalesService.GetOriginalInvoiceByNumberAsync(originalInvoiceSearchTerm.Trim(), businessUnitId);
+                
+                if (invoice != null)
+                {
+                    SelectOriginalInvoice(invoice);
+                    // Automatically load items after selecting invoice
+                    await LoadOriginalInvoiceItems();
+                }
+                else
+                {
+                    // Better error diagnostics
+                    await JSRuntime.InvokeVoidAsync("console.error", $"Invoice '{originalInvoiceSearchTerm}' not found. Requirements: Must be posted, not cancelled, and not a return.");
+                    
+                    // Invoice not found or cannot be returned
+                    showInvoiceNotFoundError = true;
+                    selectedOriginalInvoice = null;
+                    sale.OriginalInvoiceId = null;
+                    sale.OriginalInvoiceNumber = null;
+                    sale.Items.Clear();
+                }
+                
                 StateHasChanged();
             }
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("console.error", "Error searching original invoices", ex.Message);
+            await JSRuntime.InvokeVoidAsync("console.error", "Error loading invoice by number", ex.Message);
+            await JSRuntime.InvokeVoidAsync("alert", $"Error loading invoice: {ex.Message}");
+            showInvoiceNotFoundError = true;
+            StateHasChanged();
         }
     }
 
-    // **NEW: Select original invoice**
     private void SelectOriginalInvoice(Models.SalesInvoice originalInvoice)
     {
         selectedOriginalInvoice = originalInvoice;
@@ -1787,12 +1845,10 @@
         sale.BuyerCode = originalInvoice.BuyerCode;
         sale.BuyerName = originalInvoice.BuyerName;
 
-        showOriginalInvoiceSearch = false;
-        originalInvoiceSearchResults.Clear();
+        showInvoiceNotFoundError = false;
         StateHasChanged();
     }
 
-    // **NEW: Load original invoice items for return**
     private async Task LoadOriginalInvoiceItems()
     {
         if (selectedOriginalInvoice?.Items == null) return;
@@ -1826,7 +1882,7 @@
                         CurrencyId = originalItem.CurrencyId,
                         CurrencyCode = originalItem.CurrencyCode,
                         ExchangeRate = originalItem.ExchangeRate,
-                        ReturnableQuantity = returnableQty // **NEW: Set this property**
+                        ReturnableQuantity = returnableQty
                     };
 
                     sale.Items.Add(returnItem);
