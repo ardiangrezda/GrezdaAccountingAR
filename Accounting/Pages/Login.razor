@@ -5,12 +5,14 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Forms
 @using Services
+@using global::Accounting.Shared
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
 @inject BusinessUnitService BusinessUnitService
 @inject IJSRuntime JSRuntime
 @attribute [AllowAnonymous]
+@layout LoginLayout
 
 <div class="login-container">
     <div class="login-box">
@@ -234,56 +236,6 @@
         public bool RememberMe { get; set; }
     }
 }
-
-<style>
-    .login-container {
-        height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
-        padding: 20px;
-    }
-
-    .login-box {
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-        width: 100%;
-        max-width: 400px;
-    }
-
-    .form-label {
-        font-weight: 500;
-        color: #333;
-        margin-bottom: 0.5rem;
-    }
-
-    .form-control {
-        padding: 0.75rem;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 0.95rem;
-    }
-
-        .form-control:focus {
-            border-color: #1a237e;
-            box-shadow: 0 0 0 0.2rem rgba(26, 35, 126, 0.25);
-        }
-
-    .btn {
-        padding: 0.75rem 1.5rem;
-        border-radius: 6px;
-        font-weight: 500;
-    }
-
-    h3 {
-        color: #1a237e;
-        font-weight: 600;
-        margin-bottom: 2rem;
-    }
-</style>
 
 <script>
     window.submitLoginForm = function(username, password, rememberMe) {
