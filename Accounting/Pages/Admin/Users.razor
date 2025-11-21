@@ -6,50 +6,171 @@
 @using System.Linq
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
+@inject ILocalizationService LocalizationService
 @attribute [Authorize(Roles = "Admin")]
 
-<h1>Users</h1>
+<div class="container-fluid px-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="me-4">@usersLabel</h1>
+                <div>
+                    <button class="btn btn-success" @onclick="CreateUser">
+                        <i class="fas fa-plus"></i> @createUserLabel
+                    </button>
+                </div>
+            </div>
 
-<div style="margin-bottom: 1rem;">
-    <input @bind="searchTerm" placeholder="Search users..." class="form-control" style="width: 250px; display: inline-block; margin-right: 10px;" />
-    <button class="btn btn-primary" @onclick="SearchUsers">Search</button>
-    <button class="btn btn-success" style="margin-left: 20px;" @onclick="CreateUser">Create User</button>
-</div>
-
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>User Name</th>
-            <th>Email</th>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>Phone</th>
-            <th>Role(s)</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @if (users != null)
-        {
-            @foreach (var userWithRoles in users)
-            {
-                <tr>
-                    <td>@userWithRoles.User.UserName</td>
-                    <td>@userWithRoles.User.Email</td>
-                    <td>@userWithRoles.User.FirstName</td>
-                    <td>@userWithRoles.User.LastName</td>
-                    <td>@userWithRoles.User.PhoneNumber</td>
-                    <td>@string.Join(", ", userWithRoles.Roles)</td>
-                    <td>
-                        <button class="btn btn-sm btn-warning" @onclick="() => OpenChangePasswordModal(userWithRoles.User)">
-                            <i class="fas fa-key"></i> Change Password
+            <!-- Search Section -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="@searchUsersPlaceholderLabel"
+                               @bind="searchTerm" />
+                        <button class="btn btn-primary" @onclick="SearchUsers">
+                            <i class="fas fa-search"></i> @searchUserLabel
                         </button>
-                    </td>
-                </tr>
-            }
-        }
-    </tbody>
-</table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Table Card -->
+            <div class="card">
+                <div class="card-body">
+                    <!-- Pagination Info -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="text-muted">@string.Format(showingLabel, (currentPage - 1) * pageSize + 1, Math.Min(currentPage * pageSize, totalUsers), totalUsers)</span>
+                        </div>
+                        <div>
+                            <nav aria-label="User pagination">
+                                <ul class="pagination mb-0">
+                                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="PreviousPage" disabled="@(currentPage == 1)">
+                                            @previousLabel
+                                        </button>
+                                    </li>
+                                    
+                                    @for (int i = 1; i <= totalPages; i++)
+                                    {
+                                        var pageNumber = i;
+                                        <li class="page-item @(currentPage == pageNumber ? "active" : "")">
+                                            <button class="page-link" @onclick="() => GoToPage(pageNumber)">
+                                                @pageNumber
+                                            </button>
+                                        </li>
+                                    }
+                                    
+                                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                                        <button class="page-link" @onclick="NextPage" disabled="@(currentPage >= totalPages)">
+                                            @nextLabel
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+
+                    @if (users != null && users.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>@userNameLabel</th>
+                                        <th>@emailLabel</th>
+                                        <th>@firstNameLabel</th>
+                                        <th>@lastNameLabel</th>
+                                        <th>@phoneLabel</th>
+                                        <th>@roleLabel</th>
+                                        <th>@statusLabel</th>
+                                        <th>@actionsLabel</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var userWithRoles in users)
+                                    {
+                                        <tr>
+                                            <td>@userWithRoles.User.UserName</td>
+                                            <td>@userWithRoles.User.Email</td>
+                                            <td>@userWithRoles.User.FirstName</td>
+                                            <td>@userWithRoles.User.LastName</td>
+                                            <td>@userWithRoles.User.PhoneNumber</td>
+                                            <td>@string.Join(", ", userWithRoles.Roles)</td>
+                                            <td>
+                                                @if (userWithRoles.User.IsActive)
+                                                {
+                                                    <span class="badge bg-success">@activeLabel</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">@inactiveLabel</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-warning me-1" @onclick="() => OpenChangePasswordModal(userWithRoles.User)">
+                                                    <i class="fas fa-key"></i> @changePasswordLabel
+                                                </button>
+                                                
+                                                @if (userWithRoles.User.IsActive)
+                                                {
+                                                    <button class="btn btn-sm btn-secondary" @onclick="() => DisableUser(userWithRoles.User)">
+                                                        <i class="fas fa-user-slash"></i> @disableUserLabel
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-sm btn-success" @onclick="() => EnableUser(userWithRoles.User)">
+                                                        <i class="fas fa-user-check"></i> @enableUserLabel
+                                                    </button>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            No users found.
+                        </div>
+                    }
+
+                    <!-- Bottom Pagination -->
+                    <div class="d-flex justify-content-end mt-3">
+                        <nav aria-label="User pagination">
+                            <ul class="pagination mb-0">
+                                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                    <button class="page-link" @onclick="PreviousPage" disabled="@(currentPage == 1)">
+                                        @previousLabel
+                                    </button>
+                                </li>
+                                
+                                @for (int i = 1; i <= totalPages; i++)
+                                {
+                                    var pageNumber = i;
+                                    <li class="page-item @(currentPage == pageNumber ? "active" : "")">
+                                        <button class="page-link" @onclick="() => GoToPage(pageNumber)">
+                                            @pageNumber
+                                        </button>
+                                    </li>
+                                }
+                                
+                                <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                                    <button class="page-link" @onclick="NextPage" disabled="@(currentPage >= totalPages)">
+                                        @nextLabel
+                                    </button>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @if (showChangePasswordModal)
 {
@@ -58,7 +179,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Change Password for @selectedUser?.UserName</h5>
+                    <h5 class="modal-title">@changePasswordForLabel @selectedUser?.UserName</h5>
                     <button type="button" class="btn-close" @onclick="CloseChangePasswordModal"></button>
                 </div>
                 <div class="modal-body">
@@ -72,7 +193,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <label>New Password</label>
+                            <label>@newPasswordLabel</label>
                             <InputText @bind-Value="changePasswordModel.NewPassword"
                                        type="password"
                                        class="form-control"
@@ -81,7 +202,7 @@
                                        data-form-type="other" />
                         </div>
                         <div class="mb-3">
-                            <label>Confirm Password</label>
+                            <label>@confirmPasswordLabel</label>
                             <InputText @bind-Value="changePasswordModel.ConfirmPassword"
                                        type="password"
                                        class="form-control"
@@ -89,7 +210,7 @@
                                        data-lpignore="true"
                                        data-form-type="other" />
                         </div>
-                        <button type="submit" class="btn btn-primary">Change Password</button>
+                        <button type="submit" class="btn btn-primary">@changePasswordLabel</button>
                         <button type="button" class="btn btn-secondary ms-2" @onclick="CloseChangePasswordModal">Cancel</button>
                     </EditForm>
                     @if (!string.IsNullOrEmpty(changePasswordMessage))
@@ -111,11 +232,11 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Success</h5>
+                    <h5 class="modal-title">@successLabel</h5>
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-success" role="alert">
-                        The password change was successful.
+                        @successMessage
                     </div>
                     <button class="btn btn-primary" @onclick="OnSuccessOk">OK</button>
                 </div>
@@ -132,27 +253,105 @@
     private ApplicationUser? selectedUser;
     private ChangePasswordModel changePasswordModel = new();
     private string changePasswordMessage = "";
+    private string successMessage = "";
+    
+    // Pagination properties
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalUsers = 0;
+    private int totalPages => (int)Math.Ceiling((double)totalUsers / pageSize);
+    
+    // Localization strings
+    private string createUserLabel = string.Empty;
+    private string firstNameLabel = string.Empty;
+    private string lastNameLabel = string.Empty;
+    private string userNameLabel = string.Empty;
+    private string emailLabel = string.Empty;
+    private string phoneLabel = string.Empty;
+    private string roleLabel = string.Empty;
+    private string usersLabel = string.Empty;
+    private string searchUsersPlaceholderLabel = string.Empty;
+    private string actionsLabel = string.Empty;
+    private string changePasswordLabel = string.Empty;
+    private string searchUserLabel = string.Empty;
+    private string successLabel = string.Empty;
+    private string passwordChangeSuccessLabel = string.Empty;
+    private string newPasswordLabel = string.Empty;
+    private string confirmPasswordLabel = string.Empty;
+    private string changePasswordForLabel = string.Empty;
+    private string passwordsDoNotMatchLabel = string.Empty;
+    private string enableUserLabel = string.Empty;
+    private string disableUserLabel = string.Empty;
+    private string userEnabledSuccessLabel = string.Empty;
+    private string userDisabledSuccessLabel = string.Empty;
+    private string statusLabel = string.Empty;
+    private string activeLabel = string.Empty;
+    private string inactiveLabel = string.Empty;
+    private string previousLabel = string.Empty;
+    private string nextLabel = string.Empty;
+    private string showingLabel = string.Empty;
+    private string pageLabel = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadLocalizationStrings();
         await LoadUsers();
+    }
+
+    private async Task LoadLocalizationStrings()
+    {
+        var languageId = await LocalizationService.GetDefaultLanguageId();
+
+        createUserLabel = LocalizationService.GetString("STRING_00207", languageId) ?? "Create User";
+        firstNameLabel = LocalizationService.GetString("STRING_00208", languageId) ?? "First Name";
+        lastNameLabel = LocalizationService.GetString("STRING_00209", languageId) ?? "Last Name";
+        userNameLabel = LocalizationService.GetString("STRING_00210", languageId) ?? "User Name";
+        emailLabel = LocalizationService.GetString("STRING_00085", languageId) ?? "Email";
+        phoneLabel = LocalizationService.GetString("STRING_00048", languageId) ?? "Telephone";
+        roleLabel = LocalizationService.GetString("STRING_00212", languageId) ?? "Role";
+        usersLabel = LocalizationService.GetString("STRING_00183", languageId) ?? "Users";
+        searchUsersPlaceholderLabel = LocalizationService.GetString("STRING_00241", languageId) ?? "Search users...";
+        actionsLabel = LocalizationService.GetString("STRING_00039", languageId) ?? "Actions";
+        changePasswordLabel = LocalizationService.GetString("STRING_00185", languageId) ?? "Change Password";
+        searchUserLabel = LocalizationService.GetString("STRING_00242", languageId) ?? "Search user";
+        successLabel = LocalizationService.GetString("STRING_00214", languageId) ?? "Success";
+        passwordChangeSuccessLabel = LocalizationService.GetString("STRING_00243", languageId) ?? "Password change successful.";
+        newPasswordLabel = LocalizationService.GetString("STRING_00244", languageId) ?? "New Password";
+        confirmPasswordLabel = LocalizationService.GetString("STRING_00245", languageId) ?? "Confirm Password";
+        changePasswordForLabel = LocalizationService.GetString("STRING_00246", languageId) ?? "Change Password for";
+        passwordsDoNotMatchLabel = LocalizationService.GetString("STRING_00247", languageId) ?? "Passwords do not match.";
+        enableUserLabel = LocalizationService.GetString("STRING_00248", languageId) ?? "Enable User";
+        disableUserLabel = LocalizationService.GetString("STRING_00249", languageId) ?? "Disable User";
+        userEnabledSuccessLabel = LocalizationService.GetString("STRING_00250", languageId) ?? "User enabled successfully.";
+        userDisabledSuccessLabel = LocalizationService.GetString("STRING_00251", languageId) ?? "User disabled successfully.";
+        statusLabel = LocalizationService.GetString("STRING_00252", languageId) ?? "Status";
+        activeLabel = LocalizationService.GetString("STRING_00253", languageId) ?? "Active";
+        inactiveLabel = LocalizationService.GetString("STRING_00254", languageId) ?? "Inactive";
+        previousLabel = LocalizationService.GetString("STRING_00255", languageId) ?? "Previous";
+        nextLabel = LocalizationService.GetString("STRING_00256", languageId) ?? "Next";
+        showingLabel = LocalizationService.GetString("STRING_00257", languageId) ?? "Showing {0} to {1} of {2} users";
+        pageLabel = LocalizationService.GetString("STRING_00258", languageId) ?? "Page";
     }
 
     private async Task LoadUsers()
     {
         var allUsers = UserManager.Users;
 
-        List<ApplicationUser> userList;
+        // Apply search filter
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            userList = await allUsers
-                .Where(u => u.UserName!.Contains(searchTerm) || u.Email!.Contains(searchTerm))
-                .ToListAsync();
+            allUsers = allUsers.Where(u => u.UserName!.Contains(searchTerm) || u.Email!.Contains(searchTerm));
         }
-        else
-        {
-            userList = await allUsers.ToListAsync();
-        }
+
+        // Get total count for pagination
+        totalUsers = await allUsers.CountAsync();
+
+        // Apply pagination
+        var userList = await allUsers
+            .OrderBy(u => u.UserName)
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
 
         users = new List<UserWithRoles>();
         foreach (var user in userList)
@@ -168,7 +367,35 @@
 
     private async Task SearchUsers()
     {
+        currentPage = 1; // Reset to first page when searching
         await LoadUsers();
+    }
+
+    private async Task PreviousPage()
+    {
+        if (currentPage > 1)
+        {
+            currentPage--;
+            await LoadUsers();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (currentPage < totalPages)
+        {
+            currentPage++;
+            await LoadUsers();
+        }
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (page >= 1 && page <= totalPages)
+        {
+            currentPage = page;
+            await LoadUsers();
+        }
     }
 
     private void CreateUser()
@@ -197,13 +424,20 @@
         if (selectedUser is null)
             return;
 
+        if (changePasswordModel.NewPassword != changePasswordModel.ConfirmPassword)
+        {
+            changePasswordMessage = passwordsDoNotMatchLabel;
+            return;
+        }
+
         var token = await UserManager.GeneratePasswordResetTokenAsync(selectedUser);
         var result = await UserManager.ResetPasswordAsync(selectedUser, token, changePasswordModel.NewPassword);
 
         if (result.Succeeded)
         {
-            showChangePasswordModal = false; // Hide the Change Password modal
-            showSuccessModal = true;         // Show the Success modal
+            showChangePasswordModal = false;
+            successMessage = passwordChangeSuccessLabel;
+            showSuccessModal = true;
             changePasswordMessage = "";
         }
         else
@@ -212,11 +446,38 @@
         }
     }
 
+    private async Task EnableUser(ApplicationUser user)
+    {
+        user.IsActive = true;
+        var result = await UserManager.UpdateAsync(user);
+        
+        if (result.Succeeded)
+        {
+            successMessage = userEnabledSuccessLabel;
+            showSuccessModal = true;
+            await LoadUsers();
+        }
+    }
+
+    private async Task DisableUser(ApplicationUser user)
+    {
+        user.IsActive = false;
+        var result = await UserManager.UpdateAsync(user);
+        
+        if (result.Succeeded)
+        {
+            successMessage = userDisabledSuccessLabel;
+            showSuccessModal = true;
+            await LoadUsers();
+        }
+    }
+
     private void OnSuccessOk()
     {
         showSuccessModal = false;
         showChangePasswordModal = false;
-        Navigation.NavigateTo("/admin/users");
+        successMessage = "";
+        StateHasChanged();
     }
 
     public class UserWithRoles
@@ -230,9 +491,8 @@
         [Required]
         [MinLength(6)]
         public string NewPassword { get; set; } = string.Empty;
-        
+
         [Required]
-        [Compare(nameof(NewPassword), ErrorMessage = "Passwords do not match.")]
         public string ConfirmPassword { get; set; } = string.Empty;
     }
 }
