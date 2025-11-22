@@ -6,27 +6,29 @@
 @inject NavigationManager Navigation
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILocalizationService LocalizationService
+@inject IJSRuntime JSRuntime
 
 @attribute [Authorize(Roles = "Admin")]
 
-<h1>Manage User Module Access</h1>
+<h1 class="text-center">@manageUserModuleAccessLabel</h1>
 
 <div class="row">
     <div class="col-md-4">
         <div class="mb-2">
-            <input class="form-control" placeholder="Search users..." @bind="searchTerm" />
+            <input class="form-control" placeholder=@searchUsersPlaceholderLabel @bind="searchTerm" />
         </div>
 
         @if (users == null)
         {
-            <p>Loading users...</p>
+            <p>@loadingUsersLabel</p>
         }
         else
         {
             <div class="user-list mb-2">
                 <div class="user-list-header">
-                    <div class="user-list-col-username">Username</div>
-                    <div class="user-list-col-role text-end">Role</div>
+                    <div class="user-list-col-username">@userNameLabel</div>
+                    <div class="user-list-col-role text-end">@roleLabel</div>
                 </div>
 
                 <div class="user-list-body">
@@ -50,17 +52,17 @@
     <div class="col-md-8">
         @if (selectedUser == null)
         {
-            <p class="text-muted">Select a user on the left to configure module access.</p>
+            <p class="text-muted">@selectUserToConfigureLabel</p>
         }
         else if (modules == null)
         {
-            <p>Loading modules...</p>
+            <p>@loadingModulesLabel</p>
         }
         else
         {
             <div class="card">
                 <div class="card-header">
-                    Configuring access for: <strong>@selectedUser.UserName</strong> (@selectedUser.Email)
+                    @configuringAccessForLabel <strong>@selectedUser.UserName</strong> (@selectedUser.Email)
                 </div>
                 <div class="card-body">
                     @foreach (var module in modules.Where(m => CanSeeModule(m)))
@@ -99,8 +101,7 @@
                     }
                 </div>
                 <div class="card-footer d-flex justify-content-end">
-                    <button class="btn btn-secondary me-2" @onclick="ReloadUserAccess" type="button">Reload</button>
-                    <button class="btn btn-primary" @onclick="SaveAccess" type="button">Save</button>
+                    <button class="btn btn-primary" @onclick="SaveAccess" type="button">@saveLabel</button>
                 </div>
             </div>
         }
@@ -118,6 +119,18 @@
     private readonly Dictionary<string, string> userRoles = new();
     private bool isAdmin;
 
+    // Localization strings
+    private string manageUserModuleAccessLabel = string.Empty;
+    private string searchUsersPlaceholderLabel = string.Empty;
+    private string loadingUsersLabel = string.Empty;
+    private string roleLabel = string.Empty;
+    private string userNameLabel = string.Empty;
+    private string selectUserToConfigureLabel = string.Empty;
+    private string loadingModulesLabel = string.Empty;
+    private string configuringAccessForLabel = string.Empty;
+    private string saveLabel = string.Empty;
+    private string accessSavedSuccessLabel = string.Empty;
+
     private IEnumerable<ApplicationUser> FilteredUsers =>
         string.IsNullOrWhiteSpace(searchTerm)
             ? users
@@ -125,6 +138,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadLocalizationStrings();
         users = await UserModuleAccessService.GetUsersAsync();
         modules = await UserModuleAccessService.GetModulesAsync();
 
@@ -158,6 +172,22 @@
         {
             isAdmin = false;
         }
+    }
+
+    private async Task LoadLocalizationStrings()
+    {
+        var languageId = await LocalizationService.GetDefaultLanguageId();
+
+        manageUserModuleAccessLabel = LocalizationService.GetString("STRING_00259", languageId) ?? "Manage User Module Access";
+        searchUsersPlaceholderLabel = LocalizationService.GetString("STRING_00241", languageId) ?? "Search users...";
+        loadingUsersLabel = LocalizationService.GetString("STRING_00260", languageId) ?? "Loading users...";
+        roleLabel = LocalizationService.GetString("STRING_00212", languageId) ?? "Role";
+        userNameLabel = LocalizationService.GetString("STRING_00210", languageId) ?? "User Name";
+        selectUserToConfigureLabel = LocalizationService.GetString("STRING_00261", languageId) ?? "Select a user on the left to configure module access.";
+        loadingModulesLabel = LocalizationService.GetString("STRING_00262", languageId) ?? "Loading modules...";
+        configuringAccessForLabel = LocalizationService.GetString("STRING_00263", languageId) ?? "Configuring access for:";
+        saveLabel = LocalizationService.GetString("STRING_00024", languageId) ?? "Save";
+        accessSavedSuccessLabel = LocalizationService.GetString("STRING_00264", languageId) ?? "Access for user saved successfully!";
     }
 
     private string GetUserRoleDisplay(string userId)
@@ -213,7 +243,6 @@
 
     private async Task SaveAccess()
     {
-
         if (selectedUser == null)
         {
             return;
@@ -221,13 +250,9 @@
 
         await UserModuleAccessService.SaveUserAccessAsync(selectedUser.Id, currentAccess);
         accessCache[selectedUser.Id] = CloneAccess(currentAccess);
-   }
-
-    private async Task ReloadUserAccess()
-    {
-        if (selectedUser == null) return;
-        accessCache.Remove(selectedUser.Id);
-        await SelectUser(selectedUser);
+        
+        // Show success message (similar to MesssageBox.Show)
+        await JSRuntime.InvokeVoidAsync("alert", accessSavedSuccessLabel);
     }
 
     private static UserAccessViewModel CloneAccess(UserAccessViewModel src)

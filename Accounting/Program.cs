@@ -213,7 +213,8 @@ app.MapGet("/logout", async (SignInManager<ApplicationUser> signInManager, HttpC
 
 app.MapPost("/Account/Login", async (
     HttpContext context,
-    SignInManager<ApplicationUser> signInManager) =>
+    SignInManager<ApplicationUser> signInManager,
+    UserManager<ApplicationUser> userManager) => 
 {
     try 
     {
@@ -229,6 +230,19 @@ app.MapPost("/Account/Login", async (
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
         {
             return Results.Redirect("/login?error=missing");
+        }
+
+        // Check if user exists and is active BEFORE attempting sign-in
+        var user = await userManager.FindByNameAsync(username);
+        if (user == null)
+        {
+            return Results.Redirect("/login?error=failed");
+        }
+
+        // Check if user is active
+        if (!user.IsActive)
+        {
+            return Results.Redirect("/login?error=inactive");
         }
 
         var result = await signInManager.PasswordSignInAsync(username, password, rememberMe, lockoutOnFailure: false);
