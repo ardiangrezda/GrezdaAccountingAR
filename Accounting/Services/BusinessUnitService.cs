@@ -20,6 +20,23 @@ namespace Accounting.Services
                 .ToListAsync();
         }
 
+        public async Task<List<BusinessUnit>> SearchAsync(string searchTerm)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+            {
+                return await GetAllAsync();
+            }
+
+            searchTerm = searchTerm.ToLower();
+
+            return await _context.BusinessUnits
+                .Where(bu => bu.Code.ToLower().Contains(searchTerm) ||
+                            bu.Name.ToLower().Contains(searchTerm) ||
+                            (bu.Description != null && bu.Description.ToLower().Contains(searchTerm)))
+                .OrderBy(bu => bu.Name)
+                .ToListAsync();
+        }
+
         public async Task<BusinessUnit?> GetByIdAsync(int id)
         {
             return await _context.BusinessUnits.FindAsync(id);

@@ -7,20 +7,21 @@
 @inject BusinessUnitService BusinessUnitService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
+@inject ILocalizationService LocalizationService
 @attribute [Authorize(Roles = "Admin")]
 
 <div class="container-fluid px-4">
     <div class="row">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="text-center">Business Unit Access Management</h1>
+            <div class="text-center mb-4">
+                <h1>@businessUnitAccessManagementLabel</h1>
             </div>
 
             @if (loading)
             {
                 <div class="d-flex justify-content-center">
                     <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
+                        <span class="visually-hidden">@loadingLabel</span>
                     </div>
                 </div>
             }
@@ -32,7 +33,7 @@
                             <!-- User List -->
                             <div class="col-md-4 border-end">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h4 class="text-primary mb-0">Users</h4>
+                                    <h4 class="text-primary mb-0">@usersLabel</h4>
                                 </div>
                                 <div class="list-group user-list">
                                     @foreach (var user in users)
@@ -53,16 +54,16 @@
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <h4 class="text-primary mb-0">
                                             <i class="fas fa-building me-2"></i>
-                                            Business Units for @selectedUser.UserName
+                                            @businessUnitsForLabel @selectedUser.UserName
                                         </h4>
                                     </div>
                                     <div class="table-responsive">
                                         <table class="table table-hover">
                                             <thead class="table-light">
                                                 <tr>
-                                                    <th>Code</th>
-                                                    <th>Name</th>
-                                                    <th class="text-center">Access</th>
+                                                    <th>@codeLabel</th>
+                                                    <th>@nameLabel</th>
+                                                    <th class="text-center">@accessLabel</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -89,7 +90,7 @@
                                 {
                                     <div class="alert alert-info d-flex align-items-center">
                                         <i class="fas fa-info-circle me-2"></i>
-                                        Select a user to manage their business unit access.
+                                        @selectUserToManageLabel
                                     </div>
                                 }
                             </div>
@@ -152,10 +153,38 @@
     private List<BusinessUnit> businessUnits = new();
     private ApplicationUser? selectedUser;
     private List<UserBusinessUnit> userBusinessUnits = new();
+    
+    // Localization strings
+    private string businessUnitAccessManagementLabel = string.Empty;
+    private string loadingLabel = string.Empty;
+    private string usersLabel = string.Empty;
+    private string businessUnitsForLabel = string.Empty;
+    private string codeLabel = string.Empty;
+    private string nameLabel = string.Empty;
+    private string accessLabel = string.Empty;
+    private string selectUserToManageLabel = string.Empty;
+    private string accessUpdatedSuccessLabel = string.Empty;
+    private string errorUpdatingAccessLabel = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadLocalizationStrings();
         await LoadData();
+    }
+
+    private async Task LoadLocalizationStrings()
+    {
+        var languageId = await LocalizationService.GetDefaultLanguageId();
+        businessUnitAccessManagementLabel = LocalizationService.GetString("STRING_00265", languageId) ?? "Business Unit Access Management";
+        loadingLabel = LocalizationService.GetString("STRING_00266", languageId) ?? "Loading...";
+        usersLabel = LocalizationService.GetString("STRING_00183", languageId) ?? "Users";
+        businessUnitsForLabel = LocalizationService.GetString("STRING_00267", languageId) ?? "Business Units for";
+        codeLabel = LocalizationService.GetString("STRING_00033", languageId) ?? "Code";
+        nameLabel = LocalizationService.GetString("STRING_00011", languageId) ?? "Name";
+        accessLabel = LocalizationService.GetString("STRING_00268", languageId) ?? "Access";
+        selectUserToManageLabel = LocalizationService.GetString("STRING_00269", languageId) ?? "Select a user to manage their business unit access.";
+        accessUpdatedSuccessLabel = LocalizationService.GetString("STRING_00270", languageId) ?? "Access updated successfully!";
+        errorUpdatingAccessLabel = LocalizationService.GetString("STRING_00271", languageId) ?? "Error updating access:";
     }
 
     private async Task LoadData()
@@ -208,11 +237,11 @@
             }
 
             await LoadUserBusinessUnits();
-            await JSRuntime.InvokeVoidAsync("alert", "Access updated successfully!");
+            await JSRuntime.InvokeVoidAsync("alert", accessUpdatedSuccessLabel);
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error updating access: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", $"{errorUpdatingAccessLabel} {ex.Message}");
         }
     }
 }

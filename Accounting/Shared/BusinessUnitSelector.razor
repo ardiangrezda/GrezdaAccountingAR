@@ -5,17 +5,18 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@inject ILocalizationService LocalizationService
 
 <h3>BusinessUnitSelector</h3>
 
 <div class="business-unit-selector">
     @if (businessUnits == null)
     {
-        <span>Loading...</span>
+        <span>@loadingLabel</span>
     }
     else if (!businessUnits.Any())
     {
-        <span class="text-danger">No business units assigned</span>
+        <span class="text-danger">@noBusinessUnitsAssignedLabel</span>
     }
     else if (businessUnits.Count == 1)
     {
@@ -37,8 +38,13 @@
     private List<BusinessUnit>? businessUnits;
     private bool isAdmin;
 
+    // Localization strings
+    private string loadingLabel = string.Empty;
+    private string noBusinessUnitsAssignedLabel = string.Empty;
+
     protected override async Task OnInitializedAsync()
     {
+        await LoadLocalizationStrings();
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         
@@ -54,6 +60,13 @@
                 await SetBusinessUnit(businessUnits.First().Id);
             }
         }
+    }
+
+    private async Task LoadLocalizationStrings()
+    {
+        var languageId = await LocalizationService.GetDefaultLanguageId();
+        loadingLabel = LocalizationService.GetString("STRING_00266", languageId) ?? "Loading...";
+        noBusinessUnitsAssignedLabel = LocalizationService.GetString("STRING_00272", languageId) ?? "No business units assigned";
     }
 
     private async Task OnBusinessUnitChanged(ChangeEventArgs e)

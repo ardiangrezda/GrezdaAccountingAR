@@ -193,7 +193,7 @@ else if (loading)
 {
     <div class="text-center">
         <div class="spinner-border" role="status">
-            <span class="visually-hidden">Loading...</span>
+            <span class="visually-hidden">@loadingLabel</span>
         </div>
     </div>
 }
@@ -241,6 +241,7 @@ else
     private string articleNotFoundLabel = string.Empty;
     private string articleDoesNotExistLabel = string.Empty;
     private string editLabel = string.Empty;
+    private string loadingLabel = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -281,6 +282,7 @@ else
         articleNotFoundLabel = LocalizationService.GetString("STRING_00203", languageId) ?? "Article Not Found";
         articleDoesNotExistLabel = LocalizationService.GetString("STRING_00204", languageId) ?? "The article you are looking for does not exist or has been removed.";
         editLabel = LocalizationService.GetString("STRING_00021", languageId) ?? "Edit";
+        loadingLabel = LocalizationService.GetString("STRING_00266", languageId) ?? "Loading...";
     }
 
     private void GoBack()

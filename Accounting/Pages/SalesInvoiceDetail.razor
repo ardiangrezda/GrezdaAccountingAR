@@ -261,7 +261,7 @@ else if (loading)
 {
     <div class="text-center p-5">
         <div class="spinner-border" role="status">
-            <span class="visually-hidden">Loading...</span>
+            <span class="visually-hidden">@loadingLabel</span>
         </div>
     </div>
 }
@@ -531,6 +531,7 @@ else
     private string draftLabel = string.Empty;
     private string cancelledLabel = string.Empty;
     private string postedLabel = string.Empty;
+    private string loadingLabel = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -624,6 +625,7 @@ else
         
         originalInvoiceLabel = LocalizationService.GetString("STRING_00233", languageId) ?? "Original Invoice";
         returnReasonLabel = LocalizationService.GetString("STRING_00232", languageId) ?? "Return Reason";
+        loadingLabel = LocalizationService.GetString("STRING_00266", languageId) ?? "Loading...";
     }
 
     private async Task GoBack()

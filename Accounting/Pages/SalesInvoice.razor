@@ -650,7 +650,7 @@
         {
             <div class="text-center p-5">
                 <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Loading...</span>
+                    <span class="visually-hidden">@loadingLabel</span>
                 </div>
             </div>
         }
@@ -781,6 +781,7 @@
     private string allItemsQuantityGreaterZeroLabel = string.Empty;
     private string errorLoadingCategoryNameLabel = string.Empty;
     private string errorSelectingArticleLabel = string.Empty;
+    private string loadingLabel = string.Empty;
 
     // SalesInvoice UI localization strings
     private string invoiceItemsLabel = string.Empty;
@@ -1568,6 +1569,7 @@
         allItemsQuantityGreaterZeroLabel = LocalizationService.GetString("STRING_00113", languageId) ?? "All items must have a quantity greater than zero.";
         errorLoadingCategoryNameLabel = LocalizationService.GetString("STRING_00114", languageId) ?? "Error loading category name";
         errorSelectingArticleLabel = LocalizationService.GetString("STRING_00115", languageId) ?? "Error selecting article";
+        loadingLabel = LocalizationService.GetString("STRING_00266", languageId) ?? "Loading...";
         invoiceItemsLabel = LocalizationService.GetString("STRING_00116", languageId) ?? "Invoice Items";
         saveInvoiceLabel = LocalizationService.GetString("STRING_00117", languageId) ?? "Save Invoice";
         newInvoiceLabel = LocalizationService.GetString("STRING_00118", languageId) ?? "New Invoice";

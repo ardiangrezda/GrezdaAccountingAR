@@ -28,7 +28,7 @@
             {
                 <div class="text-center">
                     <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Loading...</span>
+                        <span class="visually-hidden">@loadingLabel</span>
                     </div>
                 </div>
             }
@@ -120,6 +120,7 @@
     private string draftLabel = string.Empty;
     private string cancelledLabel = string.Empty;
     private string postedLabel = string.Empty;
+    private string loadingLabel = string.Empty;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -258,6 +259,7 @@
         draftLabel = LocalizationService.GetString("STRING_00158", languageId) ?? "Draft";
         cancelledLabel = LocalizationService.GetString("STRING_00156", languageId) ?? "Cancelled";
         postedLabel = LocalizationService.GetString("STRING_00157", languageId) ?? "Posted";
+        loadingLabel = LocalizationService.GetString("STRING_00266", languageId) ?? "Loading...";
     }
 
     private async Task GetCurrentUserAndBusinessUnit()

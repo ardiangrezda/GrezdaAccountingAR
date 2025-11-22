@@ -12,23 +12,19 @@
 
 <PageTitle>@pageTitle</PageTitle>
 
-<div class="container-fluid px-4"> @* Added px-4 for horizontal padding *@
+<div class="container-fluid px-4">
     <div class="row">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="me-4">@pageTitle</h1> @* Added me-4 for right margin on the heading *@
-                <div>
-                    <button class="btn btn-success" @onclick="CreateNewArticle">
-                        <i class="fas fa-plus"></i> @newArticleText
-                    </button>
-                </div>
+            <!-- Centered Title -->
+            <div class="text-center mb-4">
+                <h1>@pageTitle</h1>
             </div>
 
             <!-- Search and Filter Section -->
             <div class="row mb-4">
-                <div class="col-md-6">
+                <div class="col-md-5">
                     <div class="input-group">
-                        <input type="text" class="form-control" placeholder="Search articles..."
+                        <input type="text" class="form-control" placeholder="@searchPlaceholder"
                                @bind="searchTerm" @onkeypress="HandleKeyPress" />
                         <button class="btn btn-primary" @onclick="SearchArticles">
                             <i class="fas fa-search"></i> @searchButtonText
@@ -44,11 +40,16 @@
                         }
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" checked="@showInactive" @onchange="OnShowInactiveChanged" />
-                        <label class="form-check-label">Show Inactive</label>
+                <div class="col-md-2">
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="showInactive" checked="@showInactive" @onchange="OnShowInactiveChanged" />
+                        <label class="form-check-label" for="showInactive">Show Inactive</label>
                     </div>
+                </div>
+                <div class="col-md-2 text-end">
+                    <button class="btn btn-success" @onclick="CreateNewArticle">
+                        <i class="fas fa-plus"></i> @newArticleText
+                    </button>
                 </div>
             </div>
 
@@ -58,7 +59,7 @@
                     @if (articles.Any())
                     {
                         <div class="table-responsive">
-                            <table class="table table-striped">
+                            <table class="table table-striped compact-table">
                                 <thead>
                                     <tr>
                                         <th>@codeHeader</th>
@@ -70,14 +71,14 @@
                                         <th>@vatHeader</th>
                                         <th>@stockHeader</th>
                                         <th>@statusHeader</th>
-                                        <th style="min-width: 120px;">@actionsHeader</th>
+                                        <th>@actionsHeader</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach (var article in articles)
                                     {
                                         <tr class="@(article.IsActive ? "" : "table-secondary")">
-                                            <td><code>@article.Code</code></td>
+                                            <td><code class="compact-code">@article.Code</code></td>
                                             <td>
                                                 @if (!string.IsNullOrEmpty(article.Barcode))
                                                 {
@@ -88,14 +89,12 @@
                                                     <span class="text-muted">-</span>
                                                 }
                                             </td>
-                                            <td>
-                                                <div class="fw-bold">@article.Description</div>
-                                            </td>
+                                            <td>@article.Description</td>
                                             <td>@article.Category</td>
-                                            <td>@article.Unit?.Description (@article.Unit?.Code)</td>
+                                            <td>@article.Unit?.Code</td>
                                             <td>@article.Price.ToString("F2") @article.Currency?.Code</td>
                                             <td>
-                                                <span class="badge bg-info">
+                                                <span class="badge bg-info compact-badge">
                                                     @article.VATTable?.VATName (@article.VATTable?.VATRate.ToString("F1")%)
                                                 </span>
                                             </td>
@@ -107,24 +106,22 @@
                                             <td>
                                                 @if (article.IsActive)
                                                 {
-                                                    <span class="badge bg-success">Active</span>
+                                                    <span class="badge bg-success compact-badge">Active</span>
                                                 }
                                                 else
                                                 {
-                                                    <span class="badge bg-secondary">Inactive</span>
+                                                    <span class="badge bg-secondary compact-badge">Inactive</span>
                                                 }
                                             </td>
                                             <td>
-                                                <div class="d-flex align-items-center">
-                                                    <button class="btn btn-sm btn-primary me-1"
-                                                            @onclick="() => ViewArticle(article.Id)">
-                                                        <i class="fas fa-eye"></i>
-                                                    </button>
-                                                    <button class="btn btn-sm btn-outline-secondary"
-                                                            @onclick="() => EditArticle(article.Id)">
-                                                        <i class="fas fa-edit"></i>
-                                                    </button>
-                                                </div>
+                                                <button class="btn btn-sm btn-primary me-1 compact-btn"
+                                                        @onclick="() => ViewArticle(article.Id)">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary compact-btn"
+                                                        @onclick="() => EditArticle(article.Id)">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                     }
@@ -143,6 +140,46 @@
         </div>
     </div>
 </div>
+
+<style>
+    /* Compact table styles */
+    .compact-table td,
+    .compact-table th {
+        padding: 0.4rem 0.5rem !important;
+        vertical-align: middle !important;
+        line-height: 1.2 !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* Compact buttons */
+    .compact-btn {
+        padding: 0.2rem 0.4rem !important;
+        font-size: 0.875rem !important;
+        line-height: 1 !important;
+    }
+
+    .compact-btn i {
+        font-size: 0.875rem !important;
+    }
+
+    /* Compact badges */
+    .compact-badge {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.7rem !important;
+        line-height: 1 !important;
+    }
+
+    /* Compact code display */
+    .compact-code {
+        font-size: 0.85rem !important;
+        padding: 0.1rem 0.3rem !important;
+    }
+
+    /* Remove bold from description */
+    .compact-table td .fw-bold {
+        font-weight: normal !important;
+    }
+</style>
 
 @code {
     private ApplicationUser? currentUser;
@@ -178,7 +215,7 @@
 
         var languageId = await LocalizationService.GetDefaultLanguageId();
 
-        pageTitle = LocalizationService.GetString("STRING_00001", languageId) ?? "Articles";  // Changed from "Article Management" to "Articles"
+        pageTitle = LocalizationService.GetString("STRING_00001", languageId) ?? "Articles";
         newArticleText = LocalizationService.GetString("STRING_00002", languageId) ?? "New Article";
         searchPlaceholder = LocalizationService.GetString("STRING_00003", languageId) ?? "Search articles...";
         searchButtonText = LocalizationService.GetString("STRING_00004", languageId) ?? "Search";
@@ -255,15 +292,12 @@
         Navigation.NavigateTo("/articles/create");
     }
 
-    // Format stock quantity to show clean numbers (no unnecessary decimals)
     private string FormatStockQuantity(decimal stockQuantity)
     {
-        // If it's a whole number, show without decimals
         if (stockQuantity == Math.Floor(stockQuantity))
         {
             return stockQuantity.ToString("0");
         }
-        // Otherwise show up to 2 decimal places, removing trailing zeros
         return stockQuantity.ToString("0.##");
     }
 }
