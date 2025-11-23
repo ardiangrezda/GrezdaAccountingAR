@@ -33,7 +33,7 @@
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" value="@selectedCategory" @onchange="OnCategoryChanged">
-                        <option value="">All Categories</option>
+                        <option value="">@allCategoriesLabel</option>
                         @foreach (var category in categories)
                         {
                             <option value="@category">@category</option>
@@ -43,7 +43,7 @@
                 <div class="col-md-2">
                     <div class="form-check mt-2">
                         <input class="form-check-input" type="checkbox" id="showInactive" checked="@showInactive" @onchange="OnShowInactiveChanged" />
-                        <label class="form-check-label" for="showInactive">Show Inactive</label>
+                        <label class="form-check-label" for="showInactive">@showInactiveLabel</label>
                     </div>
                 </div>
                 <div class="col-md-2 text-end">
@@ -56,7 +56,41 @@
             <!-- Articles Table -->
             <div class="card">
                 <div class="card-body">
-                    @if (articles.Any())
+                    <!-- Pagination Info -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="text-muted">@string.Format(showingLabel, (currentPage - 1) * pageSize + 1, Math.Min(currentPage * pageSize, totalArticles), totalArticles)</span>
+                        </div>
+                        <div>
+                            <nav aria-label="Article pagination">
+                                <ul class="pagination mb-0">
+                                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="PreviousPage" disabled="@(currentPage == 1)">
+                                            @previousLabel
+                                        </button>
+                                    </li>
+                                    
+                                    @for (int i = 1; i <= totalPages; i++)
+                                    {
+                                        var pageNumber = i;
+                                        <li class="page-item @(currentPage == pageNumber ? "active" : "")">
+                                            <button class="page-link" @onclick="() => GoToPage(pageNumber)">
+                                                @pageNumber
+                                            </button>
+                                        </li>
+                                    }
+                                    
+                                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                                        <button class="page-link" @onclick="NextPage" disabled="@(currentPage >= totalPages)">
+                                            @nextLabel
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+
+                    @if (pagedArticles.Any())
                     {
                         <div class="table-responsive">
                             <table class="table table-striped compact-table">
@@ -75,7 +109,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var article in articles)
+                                    @foreach (var article in pagedArticles)
                                     {
                                         <tr class="@(article.IsActive ? "" : "table-secondary")">
                                             <td><code class="compact-code">@article.Code</code></td>
@@ -128,11 +162,40 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Bottom Pagination -->
+                        <div class="d-flex justify-content-end mt-3">
+                            <nav aria-label="Article pagination">
+                                <ul class="pagination mb-0">
+                                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="PreviousPage" disabled="@(currentPage == 1)">
+                                            @previousLabel
+                                        </button>
+                                    </li>
+                                    
+                                    @for (int i = 1; i <= totalPages; i++)
+                                    {
+                                        var pageNumber = i;
+                                        <li class="page-item @(currentPage == pageNumber ? "active" : "")">
+                                            <button class="page-link" @onclick="() => GoToPage(pageNumber)">
+                                                @pageNumber
+                                            </button>
+                                        </li>
+                                    }
+                                    
+                                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                                        <button class="page-link" @onclick="NextPage" disabled="@(currentPage >= totalPages)">
+                                            @nextLabel
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
                     }
                     else
                     {
                         <div class="alert alert-info">
-                            No articles found.
+                            @noArticlesFoundLabel
                         </div>
                     }
                 </div>
@@ -184,16 +247,23 @@
 @code {
     private ApplicationUser? currentUser;
     private List<Article> articles = new();
+    private List<Article> pagedArticles = new();
     private List<string> categories = new();
     private string searchTerm = string.Empty;
     private string selectedCategory = string.Empty;
     private bool showInactive = false;
 
+    // Pagination properties
+    private int currentPage = 1;
+    private int pageSize = 10; // Page size is 10 for articles
+    private int totalArticles = 0;
+    private int totalPages => (int)Math.Ceiling((double)totalArticles / pageSize);
+
+    // Localization strings
     private string pageTitle = string.Empty;
     private string newArticleText = string.Empty;
     private string searchPlaceholder = string.Empty;
     private string searchButtonText = string.Empty;
-
     private string codeHeader = string.Empty;
     private string barcodeHeader = string.Empty;
     private string descriptionHeader = string.Empty;
@@ -204,6 +274,12 @@
     private string stockHeader = string.Empty;
     private string statusHeader = string.Empty;
     private string actionsHeader = string.Empty;
+    private string allCategoriesLabel = string.Empty;
+    private string showInactiveLabel = string.Empty;
+    private string previousLabel = string.Empty;
+    private string nextLabel = string.Empty;
+    private string showingLabel = string.Empty;
+    private string noArticlesFoundLabel = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -213,6 +289,13 @@
             currentUser = await UserManager.GetUserAsync(authState.User);
         }
 
+        await LoadLocalizationStrings();
+        await LoadArticles();
+        await LoadCategories();
+    }
+
+    private async Task LoadLocalizationStrings()
+    {
         var languageId = await LocalizationService.GetDefaultLanguageId();
 
         pageTitle = LocalizationService.GetString("STRING_00001", languageId) ?? "Articles";
@@ -231,13 +314,19 @@
         statusHeader = LocalizationService.GetString("STRING_00038", languageId) ?? "Status";
         actionsHeader = LocalizationService.GetString("STRING_00039", languageId) ?? "Actions";
 
-        await LoadArticles();
-        await LoadCategories();
+        allCategoriesLabel = LocalizationService.GetString("STRING_00281", languageId) ?? "All Categories";
+        showInactiveLabel = LocalizationService.GetString("STRING_00005", languageId) ?? "Show Inactive";
+        previousLabel = LocalizationService.GetString("STRING_00255", languageId) ?? "Previous";
+        nextLabel = LocalizationService.GetString("STRING_00256", languageId) ?? "Next";
+        showingLabel = LocalizationService.GetString("STRING_00282", languageId) ?? "Showing {0} to {1} of {2} articles";
+        noArticlesFoundLabel = LocalizationService.GetString("STRING_00283", languageId) ?? "No articles found.";
     }
 
     private async Task LoadArticles()
     {
         articles = await ArticleService.GetAllArticlesAsync(showInactive);
+        totalArticles = articles.Count;
+        UpdatePagedArticles();
     }
 
     private async Task LoadCategories()
@@ -245,13 +334,25 @@
         categories = await ArticleService.GetCategoriesAsync();
     }
 
+    private void UpdatePagedArticles()
+    {
+        pagedArticles = articles
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+    }
+
     private async Task SearchArticles()
     {
+        currentPage = 1;
         articles = await ArticleService.SearchArticlesAsync(searchTerm, showInactive);
+        totalArticles = articles.Count;
+        UpdatePagedArticles();
     }
 
     private async Task OnCategoryChanged(ChangeEventArgs e)
     {
+        currentPage = 1;
         selectedCategory = e.Value?.ToString() ?? string.Empty;
         if (string.IsNullOrEmpty(selectedCategory))
         {
@@ -260,11 +361,14 @@
         else
         {
             articles = await ArticleService.GetArticlesByCategoryAsync(selectedCategory, showInactive);
+            totalArticles = articles.Count;
+            UpdatePagedArticles();
         }
     }
 
     private async Task OnShowInactiveChanged(ChangeEventArgs e)
     {
+        currentPage = 1;
         showInactive = bool.Parse(e.Value?.ToString() ?? "false");
         await LoadArticles();
     }
@@ -274,6 +378,33 @@
         if (e.Key == "Enter")
         {
             await SearchArticles();
+        }
+    }
+
+    private void PreviousPage()
+    {
+        if (currentPage > 1)
+        {
+            currentPage--;
+            UpdatePagedArticles();
+        }
+    }
+
+    private void NextPage()
+    {
+        if (currentPage < totalPages)
+        {
+            currentPage++;
+            UpdatePagedArticles();
+        }
+    }
+
+    private void GoToPage(int page)
+    {
+        if (page >= 1 && page <= totalPages)
+        {
+            currentPage = page;
+            UpdatePagedArticles();
         }
     }
 

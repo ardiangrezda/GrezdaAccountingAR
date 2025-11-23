@@ -1,6 +1,7 @@
 ﻿@page "/subjects"
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using Models
 @using Services
 @inject SubjectService SubjectService
@@ -15,20 +16,15 @@
 <div class="container-fluid px-4">
     <div class="row">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="me-4">@pageTitle</h1>
-                <div>
-                    <button class="btn btn-success" @onclick="CreateNewSubject">
-                        <i class="fas fa-plus"></i> @newSubjectText
-                    </button>
-                </div>
+            <div class="text-center mb-4">
+                <h1>@pageTitle</h1>
             </div>
 
             <!-- Search and Filter Section -->
             <div class="row mb-4">
-                <div class="col-md-6">
+                <div class="col-md-5">
                     <div class="input-group">
-                        <input type="text" class="form-control" placeholder="Search subjects..."
+                        <input type="text" class="form-control" placeholder="@searchPlaceholderLabel"
                                @bind="searchTerm" @onkeypress="HandleKeyPress" />
                         <button class="btn btn-primary" @onclick="SearchSubjects">
                             <i class="fas fa-search"></i> @searchButtonText
@@ -37,27 +33,66 @@
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" @onchange="OnTypeChanged">
-                        <option value="">All Types</option>
-                        <option value="buyer">Buyers</option>
-                        <option value="supplier">Suppliers</option>
-                        <option value="international">International</option>
+                        <option value="">@allTypesLabel</option>
+                        <option value="buyer">@buyersLabel</option>
+                        <option value="supplier">@suppliersLabel</option>
+                        <option value="international">@internationalLabel</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" checked="@showInactive" @onchange="OnShowInactiveChanged" />
-                        <label class="form-check-label">Show Inactive</label>
+                <div class="col-md-2">
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="showInactive" checked="@showInactive" @onchange="OnShowInactiveChanged" />
+                        <label class="form-check-label" for="showInactive">@showInactiveLabel</label>
                     </div>
+                </div>
+                <div class="col-md-2 text-end">
+                    <button class="btn btn-success" @onclick="CreateNewSubject">
+                        <i class="fas fa-plus"></i> @newSubjectText
+                    </button>
                 </div>
             </div>
 
             <!-- Subjects Table -->
             <div class="card">
                 <div class="card-body">
-                    @if (subjects.Any())
+                    <!-- Pagination Info -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="text-muted">@string.Format(showingLabel, (currentPage - 1) * pageSize + 1, Math.Min(currentPage * pageSize, totalSubjects), totalSubjects)</span>
+                        </div>
+                        <div>
+                            <nav aria-label="Subject pagination">
+                                <ul class="pagination mb-0">
+                                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="PreviousPage" disabled="@(currentPage == 1)">
+                                            @previousLabel
+                                        </button>
+                                    </li>
+                                    
+                                    @for (int i = 1; i <= totalPages; i++)
+                                    {
+                                        var pageNumber = i;
+                                        <li class="page-item @(currentPage == pageNumber ? "active" : "")">
+                                            <button class="page-link" @onclick="() => GoToPage(pageNumber)">
+                                                @pageNumber
+                                            </button>
+                                        </li>
+                                    }
+                                    
+                                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                                        <button class="page-link" @onclick="NextPage" disabled="@(currentPage >= totalPages)">
+                                            @nextLabel
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+
+                    @if (pagedSubjects.Any())
                     {
                         <div class="table-responsive">
-                            <table class="table table-striped">
+                            <table class="table table-striped compact-table">
                                 <thead>
                                     <tr>
                                         <th>@codeHeader</th>
@@ -70,72 +105,75 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var subject in subjects)
+                                    @foreach (var subject in pagedSubjects)
                                     {
                                         <tr class="@(subject.IsActive ? "" : "table-secondary")">
-                                            <td><code>@subject.Code</code></td>
+                                            <td><code class="compact-code">@subject.Code</code></td>
                                             <td>
-                                                <div class="fw-bold">@subject.SubjectName</div>
-                                                <small class="text-muted">@subject.Description</small>
+                                                <div>@subject.SubjectName</div>
+                                                @if (!string.IsNullOrEmpty(subject.Description))
+                                                {
+                                                    <small class="text-muted">@subject.Description</small>
+                                                }
                                             </td>
                                             <td>
                                                 @if (!string.IsNullOrEmpty(subject.NUI))
                                                 {
-                                                    <div>NUI: @subject.NUI</div>
+                                                    <div><small>NUI: @subject.NUI</small></div>
                                                 }
                                                 @if (!string.IsNullOrEmpty(subject.FiscalNr))
                                                 {
-                                                    <div>Fiscal: @subject.FiscalNr</div>
+                                                    <div><small>Fiscal: @subject.FiscalNr</small></div>
                                                 }
                                             </td>
                                             <td>
                                                 @if (!string.IsNullOrEmpty(subject.ContactPerson))
                                                 {
-                                                    <div>@subject.ContactPerson</div>
+                                                    <div><small>@subject.ContactPerson</small></div>
                                                 }
                                                 @if (!string.IsNullOrEmpty(subject.Telephone))
                                                 {
-                                                    <div>📞 @subject.Telephone</div>
+                                                    <div><small>📞 @subject.Telephone</small></div>
                                                 }
                                                 @if (!string.IsNullOrEmpty(subject.Email))
                                                 {
-                                                    <div>📧 @subject.Email</div>
+                                                    <div><small>📧 @subject.Email</small></div>
                                                 }
                                             </td>
                                             <td>
                                                 @if (subject.IsBuyer)
                                                 {
-                                                    <span class="badge bg-info me-1">Buyer</span>
+                                                    <span class="badge bg-info compact-badge me-1">Buyer</span>
                                                 }
                                                 @if (subject.IsFurnitor)
                                                 {
-                                                    <span class="badge bg-success me-1">Supplier</span>
+                                                    <span class="badge bg-success compact-badge me-1">Supplier</span>
                                                 }
                                                 @if (subject.IsInternationalSubject)
                                                 {
-                                                    <span class="badge bg-warning me-1">International</span>
+                                                    <span class="badge bg-warning compact-badge me-1">International</span>
                                                 }
                                                 @if (subject.IsSubjectWithoutVAT)
                                                 {
-                                                    <span class="badge bg-secondary">No VAT</span>
+                                                    <span class="badge bg-secondary compact-badge">No VAT</span>
                                                 }
                                             </td>
                                             <td>
                                                 @if (subject.IsActive)
                                                 {
-                                                    <span class="badge bg-success">Active</span>
+                                                    <span class="badge bg-success compact-badge">@activeLabel</span>
                                                 }
                                                 else
                                                 {
-                                                    <span class="badge bg-secondary">Inactive</span>
+                                                    <span class="badge bg-secondary compact-badge">@inactiveLabel</span>
                                                 }
                                             </td>
                                             <td>
-                                                <button class="btn btn-sm btn-primary me-1"
+                                                <button class="btn btn-sm btn-primary me-1 compact-btn"
                                                         @onclick="() => ViewSubject(subject.Id)">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-outline-secondary me-1"
+                                                <button class="btn btn-sm btn-outline-secondary compact-btn"
                                                         @onclick="() => EditSubject(subject.Id)">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
@@ -145,11 +183,40 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Bottom Pagination -->
+                        <div class="d-flex justify-content-end mt-3">
+                            <nav aria-label="Subject pagination">
+                                <ul class="pagination mb-0">
+                                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="PreviousPage" disabled="@(currentPage == 1)">
+                                            @previousLabel
+                                        </button>
+                                    </li>
+                                    
+                                    @for (int i = 1; i <= totalPages; i++)
+                                    {
+                                        var pageNumber = i;
+                                        <li class="page-item @(currentPage == pageNumber ? "active" : "")">
+                                            <button class="page-link" @onclick="() => GoToPage(pageNumber)">
+                                                @pageNumber
+                                            </button>
+                                        </li>
+                                    }
+                                    
+                                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                                        <button class="page-link" @onclick="NextPage" disabled="@(currentPage >= totalPages)">
+                                            @nextLabel
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
                     }
                     else
                     {
                         <div class="alert alert-info">
-                            No subjects found.
+                            @noSubjectsFoundLabel
                         </div>
                     }
                 </div>
@@ -158,32 +225,60 @@
     </div>
 </div>
 
+<style>
+    /* Compact table styles */
+    .compact-table td,
+    .compact-table th {
+        padding: 0.4rem 0.5rem !important;
+        vertical-align: middle !important;
+        line-height: 1.2 !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* Compact buttons */
+    .compact-btn {
+        padding: 0.2rem 0.4rem !important;
+        font-size: 0.875rem !important;
+        line-height: 1 !important;
+    }
+
+    .compact-btn i {
+        font-size: 0.875rem !important;
+    }
+
+    /* Compact badges */
+    .compact-badge {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.7rem !important;
+        line-height: 1 !important;
+    }
+
+    /* Compact code display */
+    .compact-code {
+        font-size: 0.85rem !important;
+        padding: 0.1rem 0.3rem !important;
+    }
+</style>
+
 @code {
     private ApplicationUser? currentUser;
     private List<Subject> subjects = new();
+    private List<Subject> pagedSubjects = new();
     private string searchTerm = string.Empty;
     private string selectedType = string.Empty;
     private bool showInactive = false;
 
+    // Pagination properties
+    private int currentPage = 1;
+    private int pageSize = 6;
+    private int totalSubjects = 0;
+    private int totalPages => (int)Math.Ceiling((double)totalSubjects / pageSize);
+
+    // Localization strings
     private string pageTitle = string.Empty;
     private string newSubjectText = string.Empty;
     private string searchButtonText = string.Empty;
-    private string basicInfoHeader = string.Empty;
-    private string contactInfoHeader = string.Empty;
-    private string subjectTypesHeader = string.Empty;
-    private string nuiLabel = string.Empty;
-    private string fiscalNrLabel = string.Empty;
-    private string contactPersonLabel = string.Empty;
-    private string addressLabel = string.Empty;
-    private string telephoneLabel = string.Empty;
-    private string emailLabel = string.Empty;
-    private string websiteLabel = string.Empty;
-    private string backButtonText = string.Empty;
-    private string editButtonText = string.Empty;
-    private string restoreButtonText = string.Empty;
-    private string notFoundTitle = string.Empty;
-    private string notFoundMessage = string.Empty;
-
+    private string searchPlaceholderLabel = string.Empty;
     private string codeHeader = string.Empty;
     private string subjectNameHeader = string.Empty;
     private string nuiFiscalHeader = string.Empty;
@@ -191,6 +286,17 @@
     private string typeHeader = string.Empty;
     private string statusHeader = string.Empty;
     private string actionsHeader = string.Empty;
+    private string allTypesLabel = string.Empty;
+    private string buyersLabel = string.Empty;
+    private string suppliersLabel = string.Empty;
+    private string internationalLabel = string.Empty;
+    private string showInactiveLabel = string.Empty;
+    private string activeLabel = string.Empty;
+    private string inactiveLabel = string.Empty;
+    private string previousLabel = string.Empty;
+    private string nextLabel = string.Empty;
+    private string showingLabel = string.Empty;
+    private string noSubjectsFoundLabel = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -200,11 +306,18 @@
             currentUser = await UserManager.GetUserAsync(authState.User);
         }
 
+        await LoadLocalizationStrings();
+        await LoadSubjects();
+    }
+
+    private async Task LoadLocalizationStrings()
+    {
         var languageId = await LocalizationService.GetDefaultLanguageId();
 
         pageTitle = LocalizationService.GetString("STRING_00031", languageId) ?? "Subjects";
         newSubjectText = LocalizationService.GetString("STRING_00040", languageId) ?? "New Subject";
         searchButtonText = LocalizationService.GetString("STRING_00004", languageId) ?? "Search";
+        searchPlaceholderLabel = LocalizationService.GetString("STRING_00276", languageId) ?? "Search subjects...";
 
         codeHeader = LocalizationService.GetString("STRING_00033", languageId) ?? "Code";
         subjectNameHeader = LocalizationService.GetString("STRING_00034", languageId) ?? "Name";
@@ -214,40 +327,46 @@
         statusHeader = LocalizationService.GetString("STRING_00038", languageId) ?? "Status";
         actionsHeader = LocalizationService.GetString("STRING_00039", languageId) ?? "Actions";
 
-        basicInfoHeader = LocalizationService.GetString("STRING_00077", languageId) ?? "Basic Information";
-        contactInfoHeader = LocalizationService.GetString("STRING_00078", languageId) ?? "Contact Information";
-        subjectTypesHeader = LocalizationService.GetString("STRING_00079", languageId) ?? "Subject Types";
+        allTypesLabel = LocalizationService.GetString("STRING_00277", languageId) ?? "All Types";
+        buyersLabel = LocalizationService.GetString("STRING_00278", languageId) ?? "Buyers";
+        suppliersLabel = LocalizationService.GetString("STRING_00279", languageId) ?? "Suppliers";
+        internationalLabel = LocalizationService.GetString("STRING_00057", languageId) ?? "International";
+        showInactiveLabel = LocalizationService.GetString("STRING_00005", languageId) ?? "Show Inactive";
+        activeLabel = LocalizationService.GetString("STRING_00253", languageId) ?? "Active";
+        inactiveLabel = LocalizationService.GetString("STRING_00254", languageId) ?? "Inactive";
         
-        nuiLabel = LocalizationService.GetString("STRING_00080", languageId) ?? "NUI";
-        fiscalNrLabel = LocalizationService.GetString("STRING_00081", languageId) ?? "Fiscal Nr";
-        contactPersonLabel = LocalizationService.GetString("STRING_00082", languageId) ?? "Contact Person";
-        addressLabel = LocalizationService.GetString("STRING_00083", languageId) ?? "Address";
-        telephoneLabel = LocalizationService.GetString("STRING_00084", languageId) ?? "Telephone";
-        emailLabel = LocalizationService.GetString("STRING_00085", languageId) ?? "Email";
-        websiteLabel = LocalizationService.GetString("STRING_00086", languageId) ?? "Website";
-        
-        backButtonText = LocalizationService.GetString("STRING_00087", languageId) ?? "Back";
-        editButtonText = LocalizationService.GetString("STRING_00088", languageId) ?? "Edit";
-        restoreButtonText = LocalizationService.GetString("STRING_00089", languageId) ?? "Restore";
-
-        notFoundTitle = LocalizationService.GetString("STRING_00090", languageId) ?? "Not Found";
-        notFoundMessage = LocalizationService.GetString("STRING_00091", languageId) ?? "Subject not found";
-
-        await LoadSubjects();
+        previousLabel = LocalizationService.GetString("STRING_00255", languageId) ?? "Previous";
+        nextLabel = LocalizationService.GetString("STRING_00256", languageId) ?? "Next";
+        showingLabel = LocalizationService.GetString("STRING_00257", languageId) ?? "Showing {0} to {1} of {2} subjects";
+        noSubjectsFoundLabel = LocalizationService.GetString("STRING_00280", languageId) ?? "No subjects found.";
     }
 
     private async Task LoadSubjects()
     {
         subjects = await SubjectService.GetAllSubjectsAsync(showInactive);
+        totalSubjects = subjects.Count;
+        UpdatePagedSubjects();
+    }
+
+    private void UpdatePagedSubjects()
+    {
+        pagedSubjects = subjects
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
     }
 
     private async Task SearchSubjects()
     {
+        currentPage = 1; // Reset to first page when searching
         subjects = await SubjectService.SearchSubjectsAsync(searchTerm, showInactive);
+        totalSubjects = subjects.Count;
+        UpdatePagedSubjects();
     }
 
     private async Task OnTypeChanged(ChangeEventArgs e)
     {
+        currentPage = 1; // Reset to first page
         selectedType = e.Value?.ToString() ?? string.Empty;
         
         subjects = selectedType switch
@@ -257,10 +376,14 @@
             "international" => await SubjectService.GetInternationalSubjectsAsync(showInactive),
             _ => await SubjectService.GetAllSubjectsAsync(showInactive)
         };
+        
+        totalSubjects = subjects.Count;
+        UpdatePagedSubjects();
     }
 
     private async Task OnShowInactiveChanged(ChangeEventArgs e)
     {
+        currentPage = 1; // Reset to first page
         showInactive = bool.Parse(e.Value?.ToString() ?? "false");
         await LoadSubjects();
     }
@@ -270,6 +393,33 @@
         if (e.Key == "Enter")
         {
             await SearchSubjects();
+        }
+    }
+
+    private void PreviousPage()
+    {
+        if (currentPage > 1)
+        {
+            currentPage--;
+            UpdatePagedSubjects();
+        }
+    }
+
+    private void NextPage()
+    {
+        if (currentPage < totalPages)
+        {
+            currentPage++;
+            UpdatePagedSubjects();
+        }
+    }
+
+    private void GoToPage(int page)
+    {
+        if (page >= 1 && page <= totalPages)
+        {
+            currentPage = page;
+            UpdatePagedSubjects();
         }
     }
 
