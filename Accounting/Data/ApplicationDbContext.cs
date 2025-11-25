@@ -28,6 +28,7 @@ namespace Accounting.Data
         public DbSet<Module> Modules { get; set; }
         public DbSet<Submodule> Submodules { get; set; }
         public DbSet<UserModuleAccess> UserModuleAccesses { get; set; }
+        public DbSet<CompanySettings> CompanySettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
