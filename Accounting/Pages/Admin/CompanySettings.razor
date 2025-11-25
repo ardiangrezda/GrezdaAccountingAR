@@ -1,0 +1,359 @@
+@page "/admin/company-settings"
+@using Microsoft.AspNetCore.Identity
+@inject Services.CompanySettingsService CompanySettingsService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject Services.ILocalizationService LocalizationService
+@inject UserManager<Models.ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize(Roles = "Admin")]
+
+<div class="container-fluid px-4">
+    <div class="text-center mb-4">
+        <h1>@companySettingsLabel</h1>
+    </div>
+
+    @if (settings == null || currencies == null || languages == null)
+    {
+        <div class="d-flex justify-content-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">@loadingLabel</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <EditForm Model="@settings" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+
+            <!-- Basic Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-building me-2"></i>@basicInformationLabel</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">@companyNameLabel *</label>
+                            <InputText @bind-Value="settings.CompanyName" class="form-control" />
+                            <ValidationMessage For="@(() => settings.CompanyName)" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">@tradeNameLabel</label>
+                            <InputText @bind-Value="settings.TradeName" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tax & Registration Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-invoice me-2"></i>@taxRegistrationLabel</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@vatNumberLabel (TVSH)</label>
+                            <InputText @bind-Value="settings.VATNumber" class="form-control" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@nuiLabel (NIPT)</label>
+                            <InputText @bind-Value="settings.NUI" class="form-control" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@businessRegistrationNumberLabel</label>
+                            <InputText @bind-Value="settings.BusinessRegistrationNumber" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">@taxOfficeLabel</label>
+                            <InputText @bind-Value="settings.TaxOffice" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-address-book me-2"></i>@contactInformationLabel</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">@addressLabel</label>
+                            <InputTextArea @bind-Value="settings.Address" class="form-control" rows="2" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@cityLabel</label>
+                            <InputText @bind-Value="settings.City" class="form-control" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@postalCodeLabel</label>
+                            <InputText @bind-Value="settings.PostalCode" class="form-control" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@countryLabel</label>
+                            <InputText @bind-Value="settings.Country" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@phoneNumberLabel</label>
+                            <InputText @bind-Value="settings.PhoneNumber" class="form-control" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@emailLabel</label>
+                            <InputText @bind-Value="settings.Email" class="form-control" type="email" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@websiteLabel</label>
+                            <InputText @bind-Value="settings.Website" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Banking Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-university me-2"></i>@bankingInformationLabel</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">@bankNameLabel</label>
+                            <InputText @bind-Value="settings.BankName" class="form-control" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">@ibanLabel</label>
+                            <InputText @bind-Value="settings.IBAN" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">@swiftBicCodeLabel</label>
+                            <InputText @bind-Value="settings.SwiftBicCode" class="form-control" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">@bankAccountDetailsLabel</label>
+                            <InputText @bind-Value="settings.BankAccountDetails" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Financial Settings -->
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-cog me-2"></i>@financialSettingsLabel</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@defaultCurrencyLabel</label>
+                            <InputSelect @bind-Value="settings.DefaultCurrencyId" class="form-select">
+                                @foreach (var currency in currencies)
+                                {
+                                    <option value="@currency.CurrencyId">@currency.Code - @currency.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@fiscalYearStartMonthLabel</label>
+                            <InputNumber @bind-Value="settings.FiscalYearStartMonth" class="form-control" min="1" max="12" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@fiscalYearStartDayLabel</label>
+                            <InputNumber @bind-Value="settings.FiscalYearStartDay" class="form-control" min="1" max="31" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoice Settings -->
+            <div class="card mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-invoice me-2"></i>@invoiceSettingsLabel</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">@invoiceFooterTextLabel</label>
+                        <InputTextArea @bind-Value="settings.InvoiceFooterText" class="form-control" rows="3" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">@termsAndConditionsLabel</label>
+                        <InputTextArea @bind-Value="settings.TermsAndConditions" class="form-control" rows="4" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Settings -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-desktop me-2"></i>@systemSettingsLabel</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@defaultLanguageLabel</label>
+                            <InputSelect @bind-Value="settings.DefaultLanguageId" class="form-select">
+                                @foreach (var language in languages)
+                                {
+                                    <option value="@language.LanguageId">@language.Name (@language.NativeName)</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@dateFormatLabel</label>
+                            <InputText @bind-Value="settings.DateFormat" class="form-control" placeholder="dd/MM/yyyy" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@numberFormatLabel</label>
+                            <InputText @bind-Value="settings.NumberFormat" class="form-control" placeholder="0.00" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save Button -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary btn-lg" disabled="@saving">
+                            @if (saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="fas fa-save me-2"></i>@saveSettingsLabel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    }
+</div>
+
+@code {
+    private Models.CompanySettings? settings;
+    private List<Models.Currency> currencies = new();
+    private List<Models.Language> languages = new();
+    private bool saving = false;
+
+    // Localization strings
+    private string companySettingsLabel = string.Empty;
+    private string loadingLabel = string.Empty;
+    private string basicInformationLabel = string.Empty;
+    private string companyNameLabel = string.Empty;
+    private string tradeNameLabel = string.Empty;
+    private string taxRegistrationLabel = string.Empty;
+    private string vatNumberLabel = string.Empty;
+    private string nuiLabel = string.Empty;
+    private string businessRegistrationNumberLabel = string.Empty;
+    private string taxOfficeLabel = string.Empty;
+    private string contactInformationLabel = string.Empty;
+    private string addressLabel = string.Empty;
+    private string cityLabel = string.Empty;
+    private string postalCodeLabel = string.Empty;
+    private string countryLabel = string.Empty;
+    private string phoneNumberLabel = string.Empty;
+    private string emailLabel = string.Empty;
+    private string websiteLabel = string.Empty;
+    private string bankingInformationLabel = string.Empty;
+    private string bankNameLabel = string.Empty;
+    private string ibanLabel = string.Empty;
+    private string swiftBicCodeLabel = string.Empty;
+    private string bankAccountDetailsLabel = string.Empty;
+    private string financialSettingsLabel = string.Empty;
+    private string defaultCurrencyLabel = string.Empty;
+    private string fiscalYearStartMonthLabel = string.Empty;
+    private string fiscalYearStartDayLabel = string.Empty;
+    private string invoiceSettingsLabel = string.Empty;
+    private string invoiceFooterTextLabel = string.Empty;
+    private string termsAndConditionsLabel = string.Empty;
+    private string systemSettingsLabel = string.Empty;
+    private string defaultLanguageLabel = string.Empty;
+    private string dateFormatLabel = string.Empty;
+    private string numberFormatLabel = string.Empty;
+    private string saveSettingsLabel = string.Empty;
+    private string settingsSavedSuccessLabel = string.Empty;
+    private string errorSavingSettingsLabel = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLocalizationStrings();
+        settings = await CompanySettingsService.GetOrCreateSettingsAsync();
+        currencies = await CompanySettingsService.GetAllCurrenciesAsync();
+        languages = await CompanySettingsService.GetAllLanguagesAsync();
+    }
+
+    private async Task LoadLocalizationStrings()
+    {
+        var languageId = await LocalizationService.GetDefaultLanguageId();
+
+        companySettingsLabel = LocalizationService.GetString("STRING_00284", languageId) ?? "Company Settings";
+        loadingLabel = LocalizationService.GetString("STRING_00266", languageId) ?? "Loading...";
+        basicInformationLabel = LocalizationService.GetString("STRING_00285", languageId) ?? "Basic Information";
+        companyNameLabel = LocalizationService.GetString("STRING_00286", languageId) ?? "Company Name";
+        tradeNameLabel = LocalizationService.GetString("STRING_00287", languageId) ?? "Trade Name";
+        taxRegistrationLabel = LocalizationService.GetString("STRING_00288", languageId) ?? "Tax & Registration";
+        vatNumberLabel = LocalizationService.GetString("STRING_00289", languageId) ?? "VAT Number";
+        nuiLabel = LocalizationService.GetString("STRING_00080", languageId) ?? "NUI";
+        businessRegistrationNumberLabel = LocalizationService.GetString("STRING_00290", languageId) ?? "Business Registration Number";
+        taxOfficeLabel = LocalizationService.GetString("STRING_00291", languageId) ?? "Tax Office";
+        contactInformationLabel = LocalizationService.GetString("STRING_00078", languageId) ?? "Contact Information";
+        addressLabel = LocalizationService.GetString("STRING_00047", languageId) ?? "Address";
+        cityLabel = LocalizationService.GetString("STRING_00292", languageId) ?? "City";
+        postalCodeLabel = LocalizationService.GetString("STRING_00293", languageId) ?? "Postal Code";
+        countryLabel = LocalizationService.GetString("STRING_00294", languageId) ?? "Country";
+        phoneNumberLabel = LocalizationService.GetString("STRING_00295", languageId) ?? "Phone Number";
+        emailLabel = LocalizationService.GetString("STRING_00085", languageId) ?? "Email";
+        websiteLabel = LocalizationService.GetString("STRING_00086", languageId) ?? "Website";
+        bankingInformationLabel = LocalizationService.GetString("STRING_00296", languageId) ?? "Banking Information";
+        bankNameLabel = LocalizationService.GetString("STRING_00297", languageId) ?? "Bank Name";
+        ibanLabel = LocalizationService.GetString("STRING_00298", languageId) ?? "IBAN";
+        swiftBicCodeLabel = LocalizationService.GetString("STRING_00299", languageId) ?? "SWIFT/BIC Code";
+        bankAccountDetailsLabel = LocalizationService.GetString("STRING_00300", languageId) ?? "Bank Account Details";
+        financialSettingsLabel = LocalizationService.GetString("STRING_00301", languageId) ?? "Financial Settings";
+        defaultCurrencyLabel = LocalizationService.GetString("STRING_00302", languageId) ?? "Default Currency";
+        fiscalYearStartMonthLabel = LocalizationService.GetString("STRING_00303", languageId) ?? "Fiscal Year Start Month";
+        fiscalYearStartDayLabel = LocalizationService.GetString("STRING_00304", languageId) ?? "Fiscal Year Start Day";
+        invoiceSettingsLabel = LocalizationService.GetString("STRING_00305", languageId) ?? "Invoice Settings";
+        invoiceFooterTextLabel = LocalizationService.GetString("STRING_00306", languageId) ?? "Invoice Footer Text";
+        termsAndConditionsLabel = LocalizationService.GetString("STRING_00307", languageId) ?? "Terms and Conditions";
+        systemSettingsLabel = LocalizationService.GetString("STRING_00308", languageId) ?? "System Settings";
+        defaultLanguageLabel = LocalizationService.GetString("STRING_00309", languageId) ?? "Default Language";
+        dateFormatLabel = LocalizationService.GetString("STRING_00310", languageId) ?? "Date Format";
+        numberFormatLabel = LocalizationService.GetString("STRING_00311", languageId) ?? "Number Format";
+        saveSettingsLabel = LocalizationService.GetString("STRING_00312", languageId) ?? "Save Settings";
+        settingsSavedSuccessLabel = LocalizationService.GetString("STRING_00313", languageId) ?? "Settings saved successfully!";
+        errorSavingSettingsLabel = LocalizationService.GetString("STRING_00314", languageId) ?? "Error saving settings:";
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (settings == null) return;
+
+        saving = true;
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+            await CompanySettingsService.UpdateSettingsAsync(settings, userId);
+            await JSRuntime.InvokeVoidAsync("alert", settingsSavedSuccessLabel);
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"{errorSavingSettingsLabel} {ex.Message}");
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+}

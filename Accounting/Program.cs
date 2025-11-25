@@ -82,6 +82,7 @@ builder.Services.AddScoped<BusinessUnitService>();
 builder.Services.AddScoped<BusinessUnitStateContainer>();
 builder.Services.AddSingleton<StateContainer>();
 builder.Services.AddScoped<InvoiceNumberService>();
+builder.Services.AddScoped<CompanySettingsService>();
 
 // Keep UserModuleAccessService scoped, it will create short-lived contexts via IServiceScopeFactory
 builder.Services.AddScoped<UserModuleAccessService>();
