@@ -274,6 +274,11 @@
     font-size: 0.9rem; /* Smaller button text */
     padding: 0.5rem 1rem; /* Smaller button padding */
 }
+
+.quantity-exceeded {
+    border: 2px solid #dc3545 !important;
+    background-color: #f8d7da !important;
+}
 </style>
 
 <ErrorBoundary @ref="errorBoundary">
@@ -406,7 +411,7 @@
                                                     {
                                                         @foreach (var (item, index) in sale.Items.Select((item, i) => (item, i + 1)))
                                                         {
-                                                            <tr>
+                                                            <tr class="@(isReturnCategory && item.Quantity < 0 ? "table-warning" : "")">
                                                                 <td class="text-center">@index</td>
                                                                 <td>
                                                                     <input type="text"
@@ -445,13 +450,13 @@
                                                                     </td>
                                                                     <td class="text-end">
                                                                         <span class="badge bg-warning" title="@maxReturnableLabel">
-                                                                            @FormatQuantity(item.ReturnableQuantity)
+                                                                            @FormatQuantity(Math.Abs(item.ReturnableQuantity))
                                                                         </span>
                                                                     </td>
                                                                 }
                                                                 <td>
                                                                     <input type="text"
-                                                                           class="@($"form-control form-control-sm text-end {(item.Quantity <= 0 ? "invalid-field" : "")}")"
+                                                                           class="@($"form-control form-control-sm text-end {(item.Quantity == 0 ? "invalid-field" : "")} {(item.Quantity < 0 ? "text-danger fw-bold" : "")}")"
                                                                            value="@FormatQuantity(item.Quantity)"
                                                                            @oninput="(e) => HandleQuantityInput(e, item)"
                                                                            @onblur="() => CalculateItemTotal(item)"
@@ -466,7 +471,8 @@
                                                                            @bind="item.PriceWithoutVAT" @bind:event="oninput"
                                                                            @onblur="() => OnPriceWithoutVatBlurAsync(item)"
                                                                            onkeydown="if(event.key==='ArrowUp' || event.key==='ArrowDown'){event.preventDefault();}"
-                                                                           onwheel="this.blur();" />
+                                                                           onwheel="this.blur();"
+                                                                           readonly="@(isReturnCategory)" />
                                                                 </td>
                                                                 <td class="text-end">
                                                                     <input type="number" class="form-control form-control-sm text-end"
@@ -480,12 +486,13 @@
                                                                         <input type="number" class="form-control text-end"
                                                                                @bind="item.DiscountPercent"
                                                                                @bind:event="oninput"
-                                                                               @onblur="() => CalculateItemTotal(item)" />
+                                                                               @onblur="() => CalculateItemTotal(item)"
+                                                                               readonly="@(isReturnCategory)" />
                                                                     </div>
                                                                 </td>
-                                                                <td class="text-end">@item.DiscountAmount.ToString("N2")</td>
-                                                                <td class="text-end">@item.ValueWithoutVAT.ToString("N2")</td>
-                                                                <td class="text-end">@item.ValueWithVAT.ToString("N2")</td>
+                                                                <td class="text-end @(item.DiscountAmount < 0 ? "text-danger" : "")">@item.DiscountAmount.ToString("N2")</td>
+                                                                <td class="text-end @(item.ValueWithoutVAT < 0 ? "text-danger fw-bold" : "")">@item.ValueWithoutVAT.ToString("N2")</td>
+                                                                <td class="text-end @(item.ValueWithVAT < 0 ? "text-danger fw-bold" : "")">@item.ValueWithVAT.ToString("N2")</td>
                                                                 <td>
                                                                     <button type="button" class="btn btn-outline-danger btn-remove" @onclick="() => RemoveItem(item)">
                                                                         <i class="fas fa-times"></i>
@@ -838,7 +845,6 @@
     private bool isReturnCategory = false;
     private string originalInvoiceSearchTerm = string.Empty;
     private List<Models.SalesInvoice> originalInvoiceSearchResults = new();
-    private bool showOriginalInvoiceSearch = false;
     private Models.SalesInvoice? selectedOriginalInvoice = null;
     private bool showInvoiceNotFoundError = false;
 
@@ -980,7 +986,7 @@
                                     ValueWithoutVAT = sourceItem.ValueWithoutVAT,
                                     ValueWithVAT = sourceItem.ValueWithVAT,
                                     CurrencyId = sourceItem.CurrencyId,
-                                    CurrencyCode = sourceItem.CurrencyCode,
+                                    CurrencyCode = sourceItem.Currency?.Code ?? "EUR",
                                     ExchangeRate = sourceItem.ExchangeRate
                                 };
                                 
@@ -1190,21 +1196,62 @@
     {
         try
         {
-            if (item.PriceWithVAT <= 0 || item.Quantity <= 0) return;
+            // **NEW: Validate returnable quantity for returns BEFORE calculation**
+            if (isReturnCategory && item.OriginalInvoiceItemId.HasValue && item.Quantity < 0)
+            {
+                var returnableQty = item.ReturnableQuantity;
+                var absoluteQty = Math.Abs(item.Quantity);
 
+                if (absoluteQty > returnableQty)
+                {
+                    // Enforce the limit
+                    item.Quantity = -returnableQty;
+                    await JSRuntime.InvokeVoidAsync("alert",
+                        $"Quantity adjusted to maximum returnable: -{returnableQty} for '{item.Description}'");
+                }
+            }
+
+            // Skip calculation if essential values are missing
+            if (item.PriceWithVAT <= 0 || item.Quantity == 0)
+            {
+                // Reset all values to 0 if quantity is 0
+                if (item.Quantity == 0)
+                {
+                    item.ValueWithoutVAT = 0;
+                    item.DiscountAmount = 0;
+                    item.VATAmount = 0;
+                    item.ValueWithVAT = 0;
+                    RecalculateTotals();
+                    StateHasChanged();
+                }
+                return;
+            }
+
+            // Calculate price without VAT from price with VAT
             item.PriceWithoutVAT = Math.Round(item.PriceWithVAT / (1 + (item.VATPercent / 100)), 2);
+
+            // Calculate value without VAT (this will be negative if quantity is negative)
             item.ValueWithoutVAT = Math.Round(item.Quantity * item.PriceWithoutVAT, 2);
+
+            // Calculate discount amount (this will be negative if ValueWithoutVAT is negative)
             item.DiscountAmount = Math.Round(item.ValueWithoutVAT * (item.DiscountPercent / 100), 2);
+
+            // Calculate net value after discount
             decimal netValueAfterDiscount = item.ValueWithoutVAT - item.DiscountAmount;
+
+            // Calculate VAT amount (this will be negative if netValueAfterDiscount is negative)
             item.VATAmount = Math.Round(netValueAfterDiscount * (item.VATPercent / 100), 2);
 
+            // Calculate final value with VAT
             if (item.DiscountPercent == 0)
             {
-                item.ValueWithVAT = item.Quantity * item.PriceWithVAT;
+                // Simple calculation: quantity ? price with VAT
+                item.ValueWithVAT = Math.Round(item.Quantity * item.PriceWithVAT, 2);
             }
             else
             {
-                item.ValueWithVAT = netValueAfterDiscount + item.VATAmount;
+                // With discount: net value + VAT
+                item.ValueWithVAT = Math.Round(netValueAfterDiscount + item.VATAmount, 2);
             }
 
             RecalculateTotals();
@@ -1394,19 +1441,18 @@
             return false;
         }
 
-        // For regular invoices, all items must have quantity > 0
         if (isReturnCategory)
         {
-            // For returns: At least ONE item must have quantity > 0
-            var itemsWithQuantity = sale.Items.Where(i => i.Quantity > 0).ToList();
-            if (!itemsWithQuantity.Any())
+            // For returns: At least ONE item must have negative quantity
+            var itemsWithNegativeQuantity = sale.Items.Where(i => i.Quantity < 0).ToList();
+            if (!itemsWithNegativeQuantity.Any())
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Please specify a quantity greater than zero for at least one item to return.");
+                await JSRuntime.InvokeVoidAsync("alert", "Please specify a negative quantity for at least one item to return.");
                 return false;
             }
 
-            // Validate only items being returned (quantity > 0)
-            foreach (var item in itemsWithQuantity)
+            // Validate only items being returned (negative quantity)
+            foreach (var item in itemsWithNegativeQuantity)
             {
                 if (item.ArticleId <= 0)
                 {
@@ -1414,13 +1460,15 @@
                     return false;
                 }
 
-                // Validate return quantities
+                // Validate return quantities (use absolute value)
                 if (item.OriginalInvoiceItemId.HasValue)
                 {
                     var returnableQty = GetReturnableQuantityForItem(item);
-                    if (item.Quantity > returnableQty)
+                    var absoluteQty = Math.Abs(item.Quantity);
+                    
+                    if (absoluteQty > returnableQty)
                     {
-                        await JSRuntime.InvokeVoidAsync("alert", $"Cannot return {item.Quantity} of '{item.Description}'. Only {returnableQty} available for return.");
+                        await JSRuntime.InvokeVoidAsync("alert", $"Cannot return {absoluteQty} of '{item.Description}'. Only {returnableQty} available for return.");
                         return false;
                     }
                 }
@@ -1428,7 +1476,7 @@
         }
         else
         {
-            // For regular invoices: ALL items must have quantity > 0 and valid article
+            // For regular invoices: ALL items must have positive quantity and valid article
             foreach (var item in sale.Items)
             {
                 if (item.ArticleId <= 0)
@@ -1775,21 +1823,6 @@
         }
     }
 
-    private void HandleOriginalInvoiceNumberInput(ChangeEventArgs e)
-    {
-        originalInvoiceSearchTerm = e.Value?.ToString() ?? string.Empty;
-        showInvoiceNotFoundError = false; // Reset error when user types
-        StateHasChanged();
-    }
-
-    private async Task HandleInvoiceNumberKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(originalInvoiceSearchTerm))
-        {
-            await LoadInvoiceByNumber();
-        }
-    }
-
     private async Task LoadInvoiceByNumber()
     {
         if (string.IsNullOrWhiteSpace(originalInvoiceSearchTerm))
@@ -1829,7 +1862,6 @@
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("console.error", "Error loading invoice by number", ex.Message);
             await JSRuntime.InvokeVoidAsync("alert", $"Error loading invoice: {ex.Message}");
             showInvoiceNotFoundError = true;
             StateHasChanged();
@@ -1872,7 +1904,7 @@
                         Barcode = originalItem.Barcode,
                         ArticleCode = originalItem.ArticleCode,
                         Description = originalItem.Description,
-                        Quantity = 0, // User will specify return quantity
+                        Quantity = -returnableQty, // Set as NEGATIVE
                         OriginalQuantity = originalItem.Quantity,
                         OriginalInvoiceItemId = originalItem.Id,
                         UnitId = originalItem.UnitId,
@@ -1884,8 +1916,16 @@
                         CurrencyId = originalItem.CurrencyId,
                         CurrencyCode = originalItem.CurrencyCode,
                         ExchangeRate = originalItem.ExchangeRate,
-                        ReturnableQuantity = returnableQty
+                        ReturnableQuantity = returnableQty,
+                        // Initialize monetary values
+                        ValueWithoutVAT = 0,
+                        ValueWithVAT = 0,
+                        VATAmount = 0,
+                        DiscountAmount = 0
                     };
+
+                    // Calculate all values with negative quantity
+                    await CalculateItemTotal(returnItem);
 
                     sale.Items.Add(returnItem);
                 }
@@ -2025,19 +2065,82 @@
     }
 
     // Handle quantity input changes
-    private void HandleQuantityInput(ChangeEventArgs e, SalesInvoiceItem item)
+    private async Task HandleQuantityInput(ChangeEventArgs e, SalesInvoiceItem item)
     {
         var input = e.Value?.ToString() ?? "";
         
-        if (decimal.TryParse(input, out var quantity) && quantity > 0)
+        if (decimal.TryParse(input, out var quantity))
         {
-            item.Quantity = quantity;
+            if (isReturnCategory)
+            {
+                // For returns: ensure quantity is negative and within returnable limit
+                decimal negativeQty;
+                
+                if (quantity > 0)
+                {
+                    negativeQty = -quantity; // Convert positive to negative
+                }
+                else
+                {
+                    negativeQty = quantity; // Already negative or zero
+                }
+                
+                // **NEW: Validate against returnable quantity**
+                if (item.OriginalInvoiceItemId.HasValue && negativeQty < 0)
+                {
+                    var returnableQty = item.ReturnableQuantity;
+                    var absoluteInput = Math.Abs(negativeQty);
+                    
+                    if (absoluteInput > returnableQty)
+                    {
+                        // Limit to maximum returnable quantity
+                        item.Quantity = -returnableQty;
+                        await JSRuntime.InvokeVoidAsync("alert", 
+                            $"Quantity adjusted to maximum returnable: -{returnableQty} for '{item.Description}'");
+                    }
+                    else
+                    {
+                        item.Quantity = negativeQty;
+                    }
+                }
+                else
+                {
+                    item.Quantity = negativeQty;
+                }
+            }
+            else
+            {
+                // For regular sales: only positive
+                if (quantity > 0)
+                {
+                    item.Quantity = quantity;
+                }
+                else if (string.IsNullOrEmpty(input))
+                {
+                    item.Quantity = 1;
+                }
+            }
         }
         else if (string.IsNullOrEmpty(input))
         {
-            item.Quantity = 1; // Default to 1 if empty
+            item.Quantity = isReturnCategory ? 0 : 1;
         }
         
         StateHasChanged();
+    }
+
+    private void HandleOriginalInvoiceNumberInput(ChangeEventArgs e)
+    {
+        originalInvoiceSearchTerm = e.Value?.ToString() ?? string.Empty;
+        showInvoiceNotFoundError = false; // Reset error when user types
+        StateHasChanged();
+    }
+
+    private async Task HandleInvoiceNumberKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(originalInvoiceSearchTerm))
+        {
+            await LoadInvoiceByNumber();
+        }
     }
 }

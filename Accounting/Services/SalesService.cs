@@ -124,12 +124,12 @@ namespace Accounting.Services
 
             if (originalItem == null) return 0;
 
-            // Get total quantity already returned
+            // Get total quantity already returned (sum of absolute values since returns are negative)
             var totalReturned = await _context.SalesInvoiceItems
                 .Where(i => i.OriginalInvoiceItemId == originalItemId)
                 .Include(i => i.SalesInvoice)
                 .Where(i => i.SalesInvoice.IsReturn && i.SalesInvoice.IsPosted)
-                .SumAsync(i => i.Quantity);
+                .SumAsync(i => Math.Abs(i.Quantity)); // Use absolute value since returns are negative
 
             return originalItem.Quantity - totalReturned;
         }
@@ -266,11 +266,21 @@ namespace Accounting.Services
 
             if (sale.IsReturn && sale.Items != null)
             {
-                var validation = await ValidateReturnQuantitiesAsync(sale.Items.ToList());
-                if (!validation.isValid)
+                // Validate using absolute values
+                var itemsToReturn = sale.Items.Where(i => i.Quantity < 0).ToList();
+                foreach (var item in itemsToReturn)
                 {
-                    throw new InvalidOperationException(validation.errorMessage);
+                    if (item.OriginalInvoiceItemId.HasValue)
+                    {
+                        var returnableQty = await GetReturnableQuantityAsync(item.OriginalInvoiceItemId.Value);
+                        if (Math.Abs(item.Quantity) > returnableQty)
+                        {
+                            throw new InvalidOperationException($"Cannot return {Math.Abs(item.Quantity)} of '{item.Description}'. Only {returnableQty} available.");
+                        }
+                    }
                 }
+                
+                // **REMOVED: No longer negate here - quantities are already negative from UI**
             }
 
             // STEP 1: Generate invoice number and sequential number atomically
@@ -294,18 +304,12 @@ namespace Accounting.Services
             {
                 var stockUpdates = new List<(int articleId, decimal quantityChange)>();
 
-                foreach (var item in sale.Items.Where(i => i.ArticleId > 0))
+                foreach (var item in sale.Items.Where(i => i.ArticleId > 0 && i.Quantity != 0))
                 {
-                    if (sale.IsReturn)
-                    {
-                        // For returns: ADD quantity back to stock (negative change to subtract from UpdateStockQuantitiesAsync)
-                        stockUpdates.Add((item.ArticleId, -item.Quantity));
-                    }
-                    else
-                    {
-                        // For regular sales: SUBTRACT quantity from stock (positive change)
-                        stockUpdates.Add((item.ArticleId, item.Quantity));
-                    }
+                    // For returns: quantity is negative (e.g., -3), so negate to get +3 to add back to stock
+                    // For regular sales: quantity is positive (e.g., 3), keep as is to subtract from stock
+                    var stockChange = sale.IsReturn ? -item.Quantity : item.Quantity;
+                    stockUpdates.Add((item.ArticleId, stockChange));
                 }
 
                 if (stockUpdates.Any())
