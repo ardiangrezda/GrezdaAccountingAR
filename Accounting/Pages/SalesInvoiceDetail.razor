@@ -11,6 +11,7 @@
 @inject IJSRuntime JSRuntime
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject StateContainer StateContainer
+@inject Services.CompanySettingsService CompanySettingsService
 @attribute [Authorize]
 
 <PageTitle>Invoice Details</PageTitle>
@@ -66,60 +67,61 @@
                         </div>
 
                         <div class="row mb-4">
+                            <!-- SELLER INFORMATION (LEFT COLUMN) -->
                             <div class="col-md-6">
-                                <h5 class="border-bottom pb-2">@invoiceSummaryLabel</h5>
-                                <table class="table table-borderless">
-                                    <tr>
-                                        <td class="text-muted" style="width:40%">@invoiceNumberLabel:</td>
-                                        <td class="fw-bold">@invoice.InvoiceNumber</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">@invoiceDateLabel:</td>
-                                        <td>@invoice.InvoiceDate.ToShortDateString()</td>
-                                    </tr>
-                                    @if (invoice.InvoiceExpiryDate.HasValue)
-                                    {
+                                <h5 class="border-bottom pb-2">@sellerLabel</h5>
+                                @if (companySettings != null)
+                                {
+                                    <table class="table table-borderless">
                                         <tr>
-                                            <td class="text-muted">@expiryDateLabel:</td>
-                                            <td>@invoice.InvoiceExpiryDate.Value.ToShortDateString()</td>
+                                            <td class="text-muted" style="width:40%">@companyNameLabel:</td>
+                                            <td class="fw-bold">@companySettings.CompanyName</td>
                                         </tr>
-                                    }
-                                    <tr>
-                                        <td class="text-muted">@createdAtLabel:</td>
-                                        <td>@invoice.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
-                                    </tr>
-                                    @if (invoice.IsReturn && !string.IsNullOrEmpty(invoice.OriginalInvoiceNumber))
-                                    {
-                                        <tr>
-                                            <td class="text-muted">@originalInvoiceLabel:</td>
-                                            <td>@invoice.OriginalInvoiceNumber</td>        
-                                        </tr>
-                                    }
-                                    @if (invoice.IsReturn && !string.IsNullOrEmpty(invoice.ReturnReason))
-                                    {
-                                        <tr>
-                                            <td class="text-muted">@returnReasonLabel:</td>
-                                            <td class="text-warning">@invoice.ReturnReason</td>
-                                        </tr>
-                                    }
-                                    @if (invoice.LastModifiedAt.HasValue)
-                                    {
-                                        <tr>
-                                            <td class="text-muted">@lastModifiedLabel:</td>
-                                            <td>@invoice.LastModifiedAt.Value.ToString("yyyy-MM-dd HH:mm")</td>
-                                        </tr>
-                                    }
-                                    @if (invoice.IsCancelled && !string.IsNullOrEmpty(invoice.CancellationReason))
-                                    {
-                                        <tr>
-                                            <td class="text-muted">@cancellationReasonLabel:</td>
-                                            <td class="text-danger">@invoice.CancellationReason</td>
-                                        </tr>
-                                    }
-                                </table>
+                                        @if (!string.IsNullOrEmpty(companySettings.VATNumber))
+                                        {
+                                            <tr>
+                                                <td class="text-muted">@vatNumberLabel:</td>
+                                                <td>@companySettings.VATNumber</td>
+                                            </tr>
+                                        }
+                                        @if (!string.IsNullOrEmpty(companySettings.BusinessRegistrationNumber))
+                                        {
+                                            <tr>
+                                                <td class="text-muted">@businessRegistrationNumberLabel:</td>
+                                                <td>@companySettings.BusinessRegistrationNumber</td>
+                                            </tr>
+                                        }
+                                        @if (!string.IsNullOrEmpty(companySettings.NUI))
+                                        {
+                                            <tr>
+                                                <td class="text-muted">@nuiLabel:</td>
+                                                <td>@companySettings.NUI</td>
+                                            </tr>
+                                        }
+                                        @if (!string.IsNullOrEmpty(companySettings.Address))
+                                        {
+                                            <tr>
+                                                <td class="text-muted">@addressLabel:</td>
+                                                <td>@companySettings.Address</td>
+                                            </tr>
+                                        }
+                                        @if (!string.IsNullOrEmpty(companySettings.PhoneNumber))
+                                        {
+                                            <tr>
+                                                <td class="text-muted">@phoneNumberLabel:</td>
+                                                <td>@companySettings.PhoneNumber</td>
+                                            </tr>
+                                        }
+                                    </table>
+                                }
+                                else
+                                {
+                                    <p class="text-muted">@loadingLabel</p>
+                                }
                             </div>
+
+                            <!-- BUYER INFORMATION (RIGHT COLUMN) -->
                             <div class="col-md-6">
-                                <!-- Card Body: Buyer Information -->
                                 <h5 class="border-bottom pb-2">@buyerLabel</h5>
                                 <table class="table table-borderless">
                                     <tr>
@@ -139,6 +141,65 @@
                                                 <td>@invoice.Buyer.Address</td>
                                             </tr>
                                         }
+                                    }
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- INVOICE SUMMARY (BELOW SELLER/BUYER) -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h5 class="border-bottom pb-2">@invoiceSummaryLabel</h5>
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td class="text-muted" style="width:20%">@invoiceNumberLabel:</td>
+                                        <td class="fw-bold">@invoice.InvoiceNumber</td>
+                                        <td class="text-muted" style="width:20%">@invoiceDateLabel:</td>
+                                        <td>@invoice.InvoiceDate.ToShortDateString()</td>
+                                    </tr>
+                                    @if (invoice.InvoiceExpiryDate.HasValue)
+                                    {
+                                        <tr>
+                                            <td class="text-muted">@expiryDateLabel:</td>
+                                            <td>@invoice.InvoiceExpiryDate.Value.ToShortDateString()</td>
+                                            <td class="text-muted">@createdAtLabel:</td>
+                                            <td>@invoice.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td class="text-muted">@createdAtLabel:</td>
+                                            <td colspan="3">@invoice.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                        </tr>
+                                    }
+                                    @if (invoice.IsReturn && !string.IsNullOrEmpty(invoice.OriginalInvoiceNumber))
+                                    {
+                                        <tr>
+                                            <td class="text-muted">@originalInvoiceLabel:</td>
+                                            <td colspan="3">@invoice.OriginalInvoiceNumber</td>        
+                                        </tr>
+                                    }
+                                    @if (invoice.IsReturn && !string.IsNullOrEmpty(invoice.ReturnReason))
+                                    {
+                                        <tr>
+                                            <td class="text-muted">@returnReasonLabel:</td>
+                                            <td colspan="3" class="text-warning">@invoice.ReturnReason</td>
+                                        </tr>
+                                    }
+                                    @if (invoice.LastModifiedAt.HasValue)
+                                    {
+                                        <tr>
+                                            <td class="text-muted">@lastModifiedLabel:</td>
+                                            <td colspan="3">@invoice.LastModifiedAt.Value.ToString("yyyy-MM-dd HH:mm")</td>
+                                        </tr>
+                                    }
+                                    @if (invoice.IsCancelled && !string.IsNullOrEmpty(invoice.CancellationReason))
+                                    {
+                                        <tr>
+                                            <td class="text-muted">@cancellationReasonLabel:</td>
+                                            <td colspan="3" class="text-danger">@invoice.CancellationReason</td>
+                                        </tr>
                                     }
                                 </table>
                             </div>
@@ -480,11 +541,13 @@ else
     [Parameter] public int Id { get; set; }
 
     private Models.SalesInvoice? invoice;
+    private Models.CompanySettings? companySettings;
     private bool loading = true;
     private string? userId;
 
     // Localization variables
     private string invoiceNumberLabel = string.Empty;
+    private string sellerLabel = string.Empty;
     private string buyerLabel = string.Empty;
     private string invoiceDateLabel = string.Empty;
     private string codeHeader = string.Empty;
@@ -532,6 +595,11 @@ else
     private string cancelledLabel = string.Empty;
     private string postedLabel = string.Empty;
     private string loadingLabel = string.Empty;
+    private string companyNameLabel = string.Empty;
+    private string vatNumberLabel = string.Empty;
+    private string businessRegistrationNumberLabel = string.Empty;
+    private string nuiLabel = string.Empty;
+    private string phoneNumberLabel = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -544,7 +612,11 @@ else
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             
+            // Load invoice
             invoice = await SalesService.GetSaleByIdAsync(Id);
+
+            // Load company settings
+            companySettings = await CompanySettingsService.GetOrCreateSettingsAsync();
 
             if (invoice != null && invoice.SalesCategoryId > 0)
             {
@@ -578,6 +650,7 @@ else
     {
         var languageId = await LocalizationService.GetDefaultLanguageId();
         invoiceNumberLabel = LocalizationService.GetString("STRING_00139", languageId) ?? "Invoice #";
+        sellerLabel = LocalizationService.GetString("STRING_00315", languageId) ?? "Seller Information";
         buyerLabel = LocalizationService.GetString("STRING_00147", languageId) ?? "Buyer Information";
         invoiceDateLabel = LocalizationService.GetString("STRING_00119", languageId) ?? "Invoice Date";
         codeHeader = LocalizationService.GetString("STRING_00033", languageId) ?? "Code";
@@ -626,6 +699,12 @@ else
         originalInvoiceLabel = LocalizationService.GetString("STRING_00233", languageId) ?? "Original Invoice";
         returnReasonLabel = LocalizationService.GetString("STRING_00232", languageId) ?? "Return Reason";
         loadingLabel = LocalizationService.GetString("STRING_00266", languageId) ?? "Loading...";
+        
+        companyNameLabel = LocalizationService.GetString("STRING_00286", languageId) ?? "Company Name";
+        vatNumberLabel = LocalizationService.GetString("STRING_00289", languageId) ?? "VAT Number";
+        businessRegistrationNumberLabel = LocalizationService.GetString("STRING_00290", languageId) ?? "Business Registration Number";
+        nuiLabel = LocalizationService.GetString("STRING_00080", languageId) ?? "NUI";
+        phoneNumberLabel = LocalizationService.GetString("STRING_00295", languageId) ?? "Phone Number";
     }
 
     private async Task GoBack()
