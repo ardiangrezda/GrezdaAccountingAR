@@ -475,11 +475,15 @@
                                                                            readonly="@(isReturnCategory)" />
                                                                 </td>
                                                                 <td class="text-end">
-                                                                    <input type="number" class="form-control form-control-sm text-end"
+                                                                    <input type="number" class="form-control form-control-sm text-end no-spin"
+                                                                           step="0.01" inputmode="decimal"
+                                                                           lang="@System.Globalization.CultureInfo.CurrentCulture.Name"
                                                                            @bind="item.PriceWithVAT"
                                                                            @bind:event="oninput"
-                                                                           @onblur="() => CalculateItemTotal(item)"
-                                                                           readonly />
+                                                                           @onblur="() => OnPriceWithVatBlurAsync(item)"
+                                                                           onkeydown="if(event.key==='ArrowUp' || event.key==='ArrowDown'){event.preventDefault();}"
+                                                                           onwheel="this.blur();"
+                                                                           readonly="@(isReturnCategory)" />
                                                                 </td>
                                                                 <td>
                                                                     <div class="input-group input-group-sm">
@@ -638,9 +642,23 @@
                                                     <span class="fw-bold">@sale.TotalVATAmount.ToString("N2")</span>
                                                 </div>
                                                 <div class="total-due">
-                                                    <div class="d-flex justify-content-between">
+                                                    <div class="d-flex justify-content-between align-items-center">
                                                         <span class="h5 mb-0">@totalDueLabel</span>
-                                                        <span class="h5 mb-0">@sale.TotalWithVAT.ToString("N2")</span>
+                                                        
+                                                        @if (canEditTotalDue)
+                                                        {
+                                                            <input type="number" 
+                                                                   class="form-control form-control-sm text-end h5 mb-0" 
+                                                                   style="max-width: 150px; background-color: #e8f5e9;"
+                                                                   @bind="editableTotalWithVAT"
+                                                                   @bind:event="oninput"
+                                                                   @onchange="() => totalOverridden = true"
+                                                                   step="0.01" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="h5 mb-0">@sale.TotalWithVAT.ToString("N2")</span>
+                                                        }
                                                     </div>
                                                 </div>
                                             </div>
@@ -858,10 +876,18 @@
     private string createReturnLabel = string.Empty;
     private string returnCreatedSuccessfullyLabel = string.Empty;
 
+    private bool canEditTotalDue = false;
+    private decimal editableTotalWithVAT;
+    private bool totalOverridden = false;
+
     protected override async Task OnInitializedAsync()
     {
         // Load localization strings first - this is component initialization
         await LoadLocalizationStrings();
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        canEditTotalDue = user.IsInRole("Admin") || user.IsInRole("Accountant");
         
         // Then load invoice data
         await LoadInvoice();
@@ -1014,12 +1040,16 @@
             editContext.OnValidationStateChanged += ValidationStateChanged;
 
             await LoadCategoryName();
+            RecalculateTotals();
+            totalOverridden = false;
+            StateHasChanged();
         }
         catch (Exception ex)
         {
             await JSRuntime.InvokeVoidAsync("console.error", "Error initializing page", ex.Message);
             await JSRuntime.InvokeVoidAsync("alert", $"Error: {ex.Message}");
         }
+
         finally
         {
             loading = false;
@@ -1037,6 +1067,36 @@
         try
         {
             if (isSaving) return;
+            if (totalOverridden && canEditTotalDue && sale.Items.Any())
+            {
+                // Calculate the difference between the new total and the calculated one
+                decimal difference = editableTotalWithVAT - sale.TotalWithVAT;
+
+                var firstItem = sale.Items.First();
+
+                // Apply the difference to the first item's value with VAT
+                firstItem.ValueWithVAT += difference;
+
+                // Recalculate the first item's other properties based on the new ValueWithVAT
+                if (firstItem.Quantity != 0)
+                {
+                    firstItem.PriceWithVAT = firstItem.ValueWithVAT / firstItem.Quantity;
+                }
+                firstItem.ValueWithoutVAT = firstItem.ValueWithVAT / (1 + (firstItem.VATPercent / 100));
+                if (firstItem.Quantity != 0)
+                {
+                    firstItem.PriceWithoutVAT = firstItem.ValueWithoutVAT / firstItem.Quantity;
+                }
+                firstItem.VATAmount = firstItem.ValueWithVAT - firstItem.ValueWithoutVAT;
+
+                // Manually set the sale totals to match the user's input
+                sale.TotalWithVAT = editableTotalWithVAT;
+                sale.TotalWithoutVAT = sale.Items.Sum(i => i.ValueWithoutVAT);
+                sale.TotalVATAmount = sale.Items.Sum(i => i.VATAmount);
+            }
+
+            isSaving = true;
+            StateHasChanged();
 
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -1313,13 +1373,19 @@
             sale.TotalDiscountAmount = 0;
             sale.TotalVATAmount = 0;
             sale.TotalWithVAT = 0;
-            return;
+        }
+        else
+        {
+            sale.TotalWithoutVAT = sale.Items.Sum(i => i.ValueWithoutVAT);
+            sale.TotalDiscountAmount = sale.Items.Sum(i => i.DiscountAmount);
+            sale.TotalVATAmount = sale.Items.Sum(i => i.VATAmount);
+            sale.TotalWithVAT = sale.Items.Sum(i => i.ValueWithVAT);
         }
 
-        sale.TotalWithoutVAT = sale.Items.Sum(i => i.ValueWithoutVAT);
-        sale.TotalDiscountAmount = sale.Items.Sum(i => i.DiscountAmount);
-        sale.TotalVATAmount = sale.Items.Sum(i => i.VATAmount);
-        sale.TotalWithVAT = sale.Items.Sum(i => i.ValueWithVAT);
+        if (!totalOverridden)
+        {
+            editableTotalWithVAT = sale.TotalWithVAT;
+        }
     }
 
     private async Task HandleBarcodeChange(SalesInvoiceItem item)
@@ -1674,7 +1740,19 @@
     private async Task OnPriceWithoutVatBlurAsync(SalesInvoiceItem item)
     {
         item.PriceWithoutVAT = Math.Round(item.PriceWithoutVAT, 2);
+        // Formula: PriceWithVAT = PriceWithoutVAT * (1 + VAT%)
         item.PriceWithVAT = Math.Round(item.PriceWithoutVAT * (1 + (item.VATPercent / 100)), 2);
+
+        await CalculateItemTotal(item);
+    }
+
+    private async Task OnPriceWithVatBlurAsync(SalesInvoiceItem item)
+    {
+        item.PriceWithVAT = Math.Round(item.PriceWithVAT, 2);
+
+        // Formula: PriceWithoutVAT = PriceWithVAT / (1 + VAT%)
+        item.PriceWithoutVAT = Math.Round(item.PriceWithVAT / (1 + (item.VATPercent / 100)), 2);
+
         await CalculateItemTotal(item);
     }
 
@@ -2129,7 +2207,7 @@
         StateHasChanged();
     }
 
-    private void HandleOriginalInvoiceNumberInput(ChangeEventArgs e)
+    private async Task HandleOriginalInvoiceNumberInput(ChangeEventArgs e)
     {
         originalInvoiceSearchTerm = e.Value?.ToString() ?? string.Empty;
         showInvoiceNotFoundError = false; // Reset error when user types
