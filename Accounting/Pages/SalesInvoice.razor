@@ -876,6 +876,9 @@
     private string createReturnLabel = string.Empty;
     private string returnCreatedSuccessfullyLabel = string.Empty;
 
+    private string errorCheckingCategoryLabel = string.Empty;
+    private string couldNotLoadDefaultCashBuyerLabel = string.Empty;
+
     private bool canEditTotalDue = false;
     private decimal editableTotalWithVAT;
     private bool totalOverridden = false;
@@ -1735,6 +1738,9 @@
         maxReturnableLabel = LocalizationService.GetString("STRING_00238", languageId) ?? "Maximum returnable quantity";
         createReturnLabel = LocalizationService.GetString("STRING_00239", languageId) ?? "Create Return";
         returnCreatedSuccessfullyLabel = LocalizationService.GetString("STRING_00240", languageId) ?? "Return created successfully!";
+
+        errorCheckingCategoryLabel = LocalizationService.GetString("STRING_00316", languageId) ?? "Error checking category";
+        couldNotLoadDefaultCashBuyerLabel = LocalizationService.GetString("STRING_00240", languageId) ?? "Could not load default buyer ''Qytetari''";
     }
 
     private async Task OnPriceWithoutVatBlurAsync(SalesInvoiceItem item)
@@ -1767,10 +1773,30 @@
             // Initialize input values
             cashInputValue = "0.00";
             bankInputValue = "0.00";
+
+            // Set default buyer "Qytetari" for new Cash Sales
+            if (isCashCategory && !IsEdit && sale.BuyerId <= 0)
+            {
+                try 
+                {
+                    var defaultBuyer = await SubjectService.GetSubjectByCodeAsync("Qytetari");
+                    if (defaultBuyer != null)
+                    {
+                        sale.BuyerId = defaultBuyer.Id;
+                        sale.BuyerCode = defaultBuyer.Code;
+                        sale.BuyerName = defaultBuyer.SubjectName;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't stop the process if default buyer isn't found
+                    await JSRuntime.InvokeVoidAsync("console.warn", couldNotLoadDefaultCashBuyerLabel, ex.Message);
+                }
+            }
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("console.error", "Error checking category", ex.Message);
+            await JSRuntime.InvokeVoidAsync("console.error", errorCheckingCategoryLabel, ex.Message);
             isCashCategory = false;
         }
     }
