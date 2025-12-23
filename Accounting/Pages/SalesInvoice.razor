@@ -310,6 +310,9 @@
                                 <button type="button" class="btn btn-outline-secondary me-2" @onclick="GoBack">
                                     <i class="fas fa-arrow-left"></i> @backLabel
                                 </button>
+                                <button type="button" class="btn btn-outline-danger me-2" @onclick="ClearInvoiceItems">
+                                    <i class="fas fa-trash-alt"></i> @clearLabel
+                                </button>
                                 <button type="submit" class="btn btn-primary" disabled="@isSaving">
                                     @if (isSaving)
                                     {
@@ -883,6 +886,10 @@
     private decimal editableTotalWithVAT;
     private bool totalOverridden = false;
 
+    private string clearLabel = string.Empty;
+    private string clearConfirmationLabel = string.Empty;
+    private string confirmLabel = string.Empty;
+
     protected override async Task OnInitializedAsync()
     {
         // Load localization strings first - this is component initialization
@@ -1115,14 +1122,32 @@
                 {
                     await JSRuntime.InvokeVoidAsync("alert", noBusinessUnitSelectedLabel);
                     Navigation.NavigateTo("/login");
+                    isSaving = false;
                     return;
                 }
             }
 
-            if (!await ValidateInvoice()) return;
+            if (!await ValidateInvoice()) 
+            {
+                isSaving = false;
+                return;
+            }
 
-            isSaving = true;
-            StateHasChanged();
+            if (isCashCategory && !IsEdit)
+            {
+                cashPaymentModel = new CashPaymentModel
+                {
+                    Amount = sale.TotalWithVAT,
+                    Cash = 0,
+                    Bank = 0,
+                    Change = 0
+                };
+                
+                showCashPaymentModal = true;
+                isSaving = false;
+                StateHasChanged();
+                return;
+            }
 
             try
             {
@@ -1133,23 +1158,6 @@
                 else
                 {
                     await SalesService.UpdateSaleAsync(sale, userId);
-                }
-
-                // Check if this is Cash category and show payment modal
-                if (isCashCategory && !IsEdit)
-                {
-                    cashPaymentModel = new CashPaymentModel
-                    {
-                        Amount = sale.TotalWithVAT,
-                        Cash = 0,
-                        Bank = 0,
-                        Change = 0
-                    };
-                    
-                    showCashPaymentModal = true;
-                    isSaving = false;
-                    StateHasChanged();
-                    return;
                 }
 
                 // For non-cash categories or edits, proceed normally
@@ -1180,6 +1188,7 @@
         }
         catch (Exception ex)
         {
+            isSaving = false;
             await JSRuntime.InvokeVoidAsync("alert", $"An error occurred: {ex.Message}");
         }
     }
@@ -1190,11 +1199,11 @@
         {
             var categories = await StateContainer.GetSalesCategoriesAsync();
             var category = categories.FirstOrDefault(c => c.Id == sale.SalesCategoryId);
-            
+
             if (category?.Code != null)
             {
                 await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "currentSalesCategory", category.Code);
-                
+
                 var categoryRoute = GetCategoryRoute(category.Code);
                 Navigation.NavigateTo($"/{categoryRoute}");
             }
@@ -1204,7 +1213,7 @@
                 Navigation.NavigateTo("/sales");
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "currentSalesCategory");
             Navigation.NavigateTo("/sales");
@@ -1741,6 +1750,10 @@
 
         errorCheckingCategoryLabel = LocalizationService.GetString("STRING_00316", languageId) ?? "Error checking category";
         couldNotLoadDefaultCashBuyerLabel = LocalizationService.GetString("STRING_00240", languageId) ?? "Could not load default buyer ''Qytetari''";
+    
+        clearLabel = LocalizationService.GetString("STRING_00318", languageId) ?? "Clear";
+        clearConfirmationLabel = LocalizationService.GetString("STRING_00319", languageId) ?? "Are you sure you want to clear all items?";
+        confirmLabel = LocalizationService.GetString("STRING_00320", languageId) ?? "Confirm";
     }
 
     private async Task OnPriceWithoutVatBlurAsync(SalesInvoiceItem item)
@@ -1830,21 +1843,21 @@
         StateHasChanged();
     }
 
-    private async Task CloseCashPaymentModal()
+    private void CloseCashPaymentModal()
     {
         showCashPaymentModal = false;
         cashPaymentModel = new CashPaymentModel();
         cashInputValue = "0.00";
         bankInputValue = "0.00";
-
-        // Reset to a clean new invoice state
-        await ResetToNewInvoice();
     }
 
     private async Task ProcessCashPayment()
     {
         try
         {
+            // CHANGED: Save the invoice here since we deferred it
+            await SalesService.CreateSaleAsync(sale);
+
             // Hide modal first
             showCashPaymentModal = false;
             StateHasChanged();
@@ -2233,7 +2246,7 @@
         StateHasChanged();
     }
 
-    private async Task HandleOriginalInvoiceNumberInput(ChangeEventArgs e)
+    private void HandleOriginalInvoiceNumberInput(ChangeEventArgs e)
     {
         originalInvoiceSearchTerm = e.Value?.ToString() ?? string.Empty;
         showInvoiceNotFoundError = false; // Reset error when user types
@@ -2246,5 +2259,30 @@
         {
             await LoadInvoiceByNumber();
         }
+    }
+
+    private async Task ClearInvoiceItems()
+    {
+        // Optional: Add a confirmation dialog if you want to prevent accidental clearing
+        bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", clearConfirmationLabel);
+        if (!confirmed) return;
+
+        // Clear the items list
+        sale.Items.Clear();
+
+        // Reset all totals
+        sale.TotalWithoutVAT = 0;
+        sale.TotalVATAmount = 0;
+        sale.TotalDiscountAmount = 0;
+        sale.TotalWithVAT = 0;
+
+        // Reset manual override flags
+        totalOverridden = false;
+        editableTotalWithVAT = 0;
+
+        // If it's a return invoice, we might want to clear the original invoice selection too
+        // depending on requirements. For now, we just clear items as requested.
+
+        StateHasChanged();
     }
 }
