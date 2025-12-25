@@ -310,7 +310,7 @@
                                 <button type="button" class="btn btn-outline-secondary me-2" @onclick="GoBack">
                                     <i class="fas fa-arrow-left"></i> @backLabel
                                 </button>
-                                <button type="button" class="btn btn-outline-danger me-2" @onclick="ClearInvoiceItems">
+                                <button type="button" class="btn btn-outline-danger me-2" @onclick="ClearInvoiceItems" disabled="@IsEdit">
                                     <i class="fas fa-trash-alt"></i> @clearLabel
                                 </button>
                                 <button type="submit" class="btn btn-primary" disabled="@isSaving">
@@ -878,6 +878,7 @@
     private string bankInputValue = "0.00";
 
     private bool isReturnCategory = false;
+    private bool isExportCategory = false;
     private string originalInvoiceSearchTerm = string.Empty;
     private List<Models.SalesInvoice> originalInvoiceSearchResults = new();
     private Models.SalesInvoice? selectedOriginalInvoice = null;
@@ -893,9 +894,12 @@
     private string createReturnLabel = string.Empty;
     private string returnCreatedSuccessfullyLabel = string.Empty;
 
-    private string errorCheckingCategoryLabel = string.Empty;
+    private string errorCheckingCashCategoryLabel = string.Empty;
+    private string errorCheckingReturnCategoryLabel = string.Empty;
+    private string errorCheckingExportCategoryLabel = string.Empty;
+
     private string couldNotLoadDefaultCashBuyerLabel = string.Empty;
-    private string errorSearchingBarcode = string.Empty;
+    private string errorSearchingBarcodeLabel = string.Empty;
 
     private bool canEditTotalDue = false;
     private decimal editableTotalWithVAT;
@@ -925,6 +929,9 @@
 
         // Check if this is a return category
         await CheckIfReturnCategory();
+
+        // Check if this is an export category
+        await CheckIfExportCategory();
     }
 
     private async Task LoadInvoice()
@@ -1433,7 +1440,7 @@
                 item.PriceWithVAT = article.Price;
                 item.UnitId = article.UnitId;
                 item.UnitCode = article.Unit?.Code ?? "";
-                item.VATPercent = article.VATTable?.VATRate ?? 0;
+                item.VATPercent = isExportCategory ? 0 : (article.VATTable?.VATRate ?? 0);
                 item.CurrencyId = article.CurrencyId;
                 item.CurrencyCode = article.Currency?.Code ?? "EUR";
 
@@ -1670,7 +1677,7 @@
             item.PriceWithVAT = article.Price;
             item.UnitId = article.UnitId;
             item.UnitCode = article.Unit?.Code ?? "";
-            item.VATPercent = article.VATTable?.VATRate ?? 0;
+            item.VATPercent = isExportCategory ? 0 : (article.VATTable?.VATRate ?? 0);
             item.CurrencyId = article.CurrencyId;
             item.CurrencyCode = article.Currency?.Code ?? "EUR";
 
@@ -1770,14 +1777,16 @@
         createReturnLabel = LocalizationService.GetString("STRING_00239", languageId) ?? "Create Return";
         returnCreatedSuccessfullyLabel = LocalizationService.GetString("STRING_00240", languageId) ?? "Return created successfully!";
 
-        errorCheckingCategoryLabel = LocalizationService.GetString("STRING_00316", languageId) ?? "Error checking category";
         couldNotLoadDefaultCashBuyerLabel = LocalizationService.GetString("STRING_00240", languageId) ?? "Could not load default buyer ''Qytetari''";
 
         clearLabel = LocalizationService.GetString("STRING_00318", languageId) ?? "Clear";
         clearConfirmationLabel = LocalizationService.GetString("STRING_00319", languageId) ?? "Are you sure you want to clear all items?";
         confirmLabel = LocalizationService.GetString("STRING_00320", languageId) ?? "Confirm";
 
-        errorSearchingBarcode = LocalizationService.GetString("STRING_00321", languageId) ?? "Error searching barcodes";
+        errorSearchingBarcodeLabel = LocalizationService.GetString("STRING_00321", languageId) ?? "Error searching barcodes";
+        errorCheckingCashCategoryLabel = LocalizationService.GetString("STRING_00316", languageId) ?? "Error checking cash category";
+        errorCheckingReturnCategoryLabel = LocalizationService.GetString("STRING_00322", languageId) ?? "Error checking return category";
+        errorCheckingExportCategoryLabel = LocalizationService.GetString("STRING_00323", languageId) ?? "Error checking export category";
     }
 
     private async Task OnPriceWithoutVatBlurAsync(SalesInvoiceItem item)
@@ -1833,7 +1842,7 @@
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("console.error", errorCheckingCategoryLabel, ex.Message);
+            await JSRuntime.InvokeVoidAsync("console.error", errorCheckingCashCategoryLabel, ex.Message);
             isCashCategory = false;
         }
     }
@@ -1853,8 +1862,24 @@
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("console.error", "Error checking return category", ex.Message);
+            await JSRuntime.InvokeVoidAsync("console.error", errorCheckingReturnCategoryLabel, ex.Message);
             isReturnCategory = false;
+        }
+    }
+
+    // Export Payment Modal methods
+    private async Task CheckIfExportCategory()
+    {
+        try
+        {
+            var categories = await StateContainer.GetSalesCategoriesAsync();
+            var category = categories.FirstOrDefault(c => c.Id == sale.SalesCategoryId);
+            isExportCategory = category?.Code?.ToUpper() == "EXP";
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", errorCheckingExportCategoryLabel, ex.Message);
+            isExportCategory = false;
         }
     }
 
@@ -2334,7 +2359,7 @@
             }
             catch (Exception ex)
             {
-                await JSRuntime.InvokeVoidAsync("console.error", errorSearchingBarcode, ex.Message);
+                await JSRuntime.InvokeVoidAsync("console.error", errorSearchingBarcodeLabel, ex.Message);
             }
         }
         else
