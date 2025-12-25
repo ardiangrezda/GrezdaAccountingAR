@@ -108,7 +108,6 @@
         position: absolute;
         top: 100%;
         left: 0;
-        right: 0;
         background: white;
         border: 1px solid #dee2e6;
         border-radius: 0.375rem;
@@ -116,7 +115,8 @@
         max-height: 300px;
         overflow-y: auto;
         z-index: 1050;
-        min-width: 100%;
+        min-width: 400px; /* Force a wider dropdown to show description */
+        width: max-content; /* Allow it to grow if content is even wider */
     }
     
     .buyer-item, .article-item {
@@ -417,12 +417,26 @@
                                                             <tr class="@(isReturnCategory && item.Quantity < 0 ? "table-warning" : "")">
                                                                 <td class="text-center">@index</td>
                                                                 <td>
-                                                                    <input type="text"
-                                                                           class="@($"form-control form-control-sm {(string.IsNullOrEmpty(item.Barcode) ? "invalid-field" : "")}")"
-                                                                           @bind="item.Barcode"
-                                                                           @bind:event="oninput"
-                                                                           @onblur="() => HandleBarcodeChange(item)"
-                                                                           readonly="@(isReturnCategory)" />
+                                                                    <div class="position-relative">
+                                                                        <input type="text"
+                                                                               class="@($"form-control form-control-sm {(string.IsNullOrEmpty(item.Barcode) ? "invalid-field" : "")}")"
+                                                                               value="@item.Barcode"
+                                                                               @oninput="(e) => HandleBarcodeSearch(e, item)"
+                                                                               @onfocus="() => SetActiveSearchItem(item)"
+                                                                               @onblur="() => HandleBarcodeChange(item)"
+                                                                               readonly="@(isReturnCategory)" />
+                                                                        @if (activeSearchItem == item && showBarcodeSearch && barcodeSearchResults.Any() && !isReturnCategory)
+                                                                        {
+                                                                            <div class="search-dropdown">
+                                                                                @foreach (var article in barcodeSearchResults)
+                                                                                {
+                                                                                    <div class="article-item" @onmousedown="() => SelectArticle(article, item)">
+                                                                                        <div><strong>@article.Barcode</strong> - @article.Description</div>
+                                                                                    </div>
+                                                                                }
+                                                                            </div>
+                                                                        }
+                                                                    </div>
                                                                 </td>
                                                                 <td>
                                                                     <div class="position-relative">
@@ -881,6 +895,7 @@
 
     private string errorCheckingCategoryLabel = string.Empty;
     private string couldNotLoadDefaultCashBuyerLabel = string.Empty;
+    private string errorSearchingBarcode = string.Empty;
 
     private bool canEditTotalDue = false;
     private decimal editableTotalWithVAT;
@@ -890,6 +905,9 @@
     private string clearConfirmationLabel = string.Empty;
     private string confirmLabel = string.Empty;
 
+    private List<Article> barcodeSearchResults = new();
+    private bool showBarcodeSearch = false;
+
     protected override async Task OnInitializedAsync()
     {
         // Load localization strings first - this is component initialization
@@ -898,13 +916,13 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         canEditTotalDue = user.IsInRole("Admin") || user.IsInRole("Accountant");
-        
+
         // Then load invoice data
         await LoadInvoice();
-        
+
         // Check if this is Cash category
         await CheckIfCashCategory();
-        
+
         // Check if this is a return category
         await CheckIfReturnCategory();
     }
@@ -914,7 +932,7 @@
         try
         {
             loading = true;
-            
+
             // Now pageTitle can use the already-loaded localization strings
             pageTitle = IsEdit ? editInvoiceLabel : createInvoiceLabel;
 
@@ -923,7 +941,7 @@
 
             var currentBusinessUnitId = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentBusinessUnit");
             int businessUnitId = 0;
-            
+
             if (!string.IsNullOrEmpty(currentBusinessUnitId) && int.TryParse(currentBusinessUnitId, out businessUnitId))
             {
                 try
@@ -948,7 +966,7 @@
             if (!IsEdit)
             {
                 var storedCategoryId = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "selectedSalesCategoryId");
-                
+
                 await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "selectedSalesCategoryId");
 
                 var categoryId = !string.IsNullOrEmpty(storedCategoryId) && int.TryParse(storedCategoryId, out var id) 
@@ -1025,7 +1043,7 @@
                                     CurrencyCode = sourceItem.Currency?.Code ?? "EUR",
                                     ExchangeRate = sourceItem.ExchangeRate
                                 };
-                                
+
                                 sale.Items.Add(item);
                             }
                         }
@@ -1142,7 +1160,7 @@
                     Bank = 0,
                     Change = 0
                 };
-                
+
                 showCashPaymentModal = true;
                 isSaving = false;
                 StateHasChanged();
@@ -1340,7 +1358,7 @@
         try
         {
             sale.Items ??= new List<SalesInvoiceItem>();
-            
+
             var newItem = new SalesInvoiceItem
             {
                 SalesInvoiceId = sale.Id,
@@ -1363,12 +1381,12 @@
                 CurrencyId = 0,
                 Barcode = ""
             };
-            
+
             sale.Items.Add(newItem);
-            
+
             editContext = new EditContext(sale);
             editContext.OnValidationStateChanged += ValidationStateChanged;
-            
+
             StateHasChanged();
         }
         catch (Exception ex)
@@ -1543,7 +1561,7 @@
                 {
                     var returnableQty = GetReturnableQuantityForItem(item);
                     var absoluteQty = Math.Abs(item.Quantity);
-                    
+
                     if (absoluteQty > returnableQty)
                     {
                         await JSRuntime.InvokeVoidAsync("alert", $"Cannot return {absoluteQty} of '{item.Description}'. Only {returnableQty} available for return.");
@@ -1582,9 +1600,9 @@
         if (sale.Items == null || !sale.Items.Any()) return true;
 
         var stockRequests = sale.Items
-            .Where(item => item.ArticleId > 0)
-            .Select(item => (item.ArticleId, item.Quantity))
-            .ToList();
+        .Where(item => item.ArticleId > 0)
+        .Select(item => (item.ArticleId, item.Quantity))
+        .ToList();
 
         if (!stockRequests.Any()) return true;
 
@@ -1596,21 +1614,21 @@
             if (insufficientStock.Any())
             {
                 var errorMessage = "Insufficient stock for the following articles:\\n" +
-                    string.Join("\\n", insufficientStock.Select(s => 
-                        $"- {s.articleCode}: Available {s.availableStock}, Required {s.requestedStock}"));
-                
+                string.Join("\\n", insufficientStock.Select(s => 
+                $"- {s.articleCode}: Available {s.availableStock}, Required {s.requestedStock}"));
+
                 await JSRuntime.InvokeVoidAsync("alert", errorMessage);
                 return false;
-            }
+                }
 
             return true;
-        }
+            }
         catch (Exception ex)
         {
             await JSRuntime.InvokeVoidAsync("alert", $"Error checking stock availability: {ex.Message}");
             return false;
+            }
         }
-    }
      */
 
     private async Task LoadCategoryName()
@@ -1660,10 +1678,14 @@
 
             showArticleSearch = false;
             articleSearchResults.Clear();
+
+            showBarcodeSearch = false;
+            barcodeSearchResults.Clear();
+
             activeSearchItem = null;
 
             await CalculateItemTotal(item);
-            
+
             StateHasChanged();
         }
         catch (Exception ex)
@@ -1750,10 +1772,12 @@
 
         errorCheckingCategoryLabel = LocalizationService.GetString("STRING_00316", languageId) ?? "Error checking category";
         couldNotLoadDefaultCashBuyerLabel = LocalizationService.GetString("STRING_00240", languageId) ?? "Could not load default buyer ''Qytetari''";
-    
+
         clearLabel = LocalizationService.GetString("STRING_00318", languageId) ?? "Clear";
         clearConfirmationLabel = LocalizationService.GetString("STRING_00319", languageId) ?? "Are you sure you want to clear all items?";
         confirmLabel = LocalizationService.GetString("STRING_00320", languageId) ?? "Confirm";
+
+        errorSearchingBarcode = LocalizationService.GetString("STRING_00321", languageId) ?? "Error searching barcodes";
     }
 
     private async Task OnPriceWithoutVatBlurAsync(SalesInvoiceItem item)
@@ -1821,7 +1845,7 @@
             var categories = await StateContainer.GetSalesCategoriesAsync();
             var category = categories.FirstOrDefault(c => c.Id == sale.SalesCategoryId);
             isReturnCategory = category?.Code?.ToUpper() == "RET";
-            
+
             if (isReturnCategory)
             {
                 sale.IsReturn = true;
@@ -1948,13 +1972,13 @@
         try
         {
             showInvoiceNotFoundError = false;
-            
+
             var currentBusinessUnitId = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentBusinessUnit");
             if (int.TryParse(currentBusinessUnitId, out var businessUnitId))
             {
                 // Use the exact invoice number search
                 var invoice = await SalesService.GetOriginalInvoiceByNumberAsync(originalInvoiceSearchTerm.Trim(), businessUnitId);
-                
+
                 if (invoice != null)
                 {
                     SelectOriginalInvoice(invoice);
@@ -1965,7 +1989,7 @@
                 {
                     // Better error diagnostics
                     await JSRuntime.InvokeVoidAsync("console.error", $"Invoice '{originalInvoiceSearchTerm}' not found. Requirements: Must be posted, not cancelled, and not a return.");
-                    
+
                     // Invoice not found or cannot be returned
                     showInvoiceNotFoundError = true;
                     selectedOriginalInvoice = null;
@@ -1973,7 +1997,7 @@
                     sale.OriginalInvoiceNumber = null;
                     sale.Items.Clear();
                 }
-                
+
                 StateHasChanged();
             }
         }
@@ -1990,7 +2014,7 @@
         selectedOriginalInvoice = originalInvoice;
         sale.OriginalInvoiceId = originalInvoice.Id;
         sale.OriginalInvoiceNumber = originalInvoice.InvoiceNumber;
-        
+
         // Set buyer information from original invoice
         sale.BuyerId = originalInvoice.BuyerId;
         sale.BuyerCode = originalInvoice.BuyerCode;
@@ -2011,7 +2035,7 @@
             foreach (var originalItem in selectedOriginalInvoice.Items)
             {
                 var returnableQty = await SalesService.GetReturnableQuantityAsync(originalItem.Id);
-                
+
                 if (returnableQty > 0)
                 {
                     var returnItem = new SalesInvoiceItem
@@ -2060,7 +2084,7 @@
     private decimal GetReturnableQuantityForItem(SalesInvoiceItem item)
     {
         if (!item.OriginalInvoiceItemId.HasValue) return 0;
-        
+
         // Store the returnable quantity in the item when loading original items
         // This way we don't need to make async calls in the rendering
         return item.ReturnableQuantity; // ReturnableQuantity is a non-nullable decimal
@@ -2111,7 +2135,7 @@
     {
         var input = e.Value?.ToString() ?? "";
         cashInputValue = ValidateAndFormatNumericInput(input);
-        
+
         if (decimal.TryParse(cashInputValue, out var cashValue))
         {
             cashPaymentModel.Cash = Math.Round(cashValue, 2);
@@ -2120,7 +2144,7 @@
         {
             cashPaymentModel.Cash = 0;
         }
-        
+
         CalculateChange();
         StateHasChanged();
     }
@@ -2129,7 +2153,7 @@
     {
         var input = e.Value?.ToString() ?? "";
         bankInputValue = ValidateAndFormatNumericInput(input);
-        
+
         if (decimal.TryParse(bankInputValue, out var bankValue))
         {
             cashPaymentModel.Bank = Math.Round(bankValue, 2);
@@ -2138,7 +2162,7 @@
         {
             cashPaymentModel.Bank = 0;
         }
-        
+
         CalculateChange();
         StateHasChanged();
     }
@@ -2155,7 +2179,7 @@
             {
                 if (decimalFound && decimalPlaces >= 2)
                     break; // Limit to 2 decimal places
-                
+
                 cleanInput += c;
                 if (decimalFound) decimalPlaces++;
             }
@@ -2185,14 +2209,14 @@
     private async Task HandleQuantityInput(ChangeEventArgs e, SalesInvoiceItem item)
     {
         var input = e.Value?.ToString() ?? "";
-        
+
         if (decimal.TryParse(input, out var quantity))
         {
             if (isReturnCategory)
             {
                 // For returns: ensure quantity is negative and within returnable limit
                 decimal negativeQty;
-                
+
                 if (quantity > 0)
                 {
                     negativeQty = -quantity; // Convert positive to negative
@@ -2201,13 +2225,13 @@
                 {
                     negativeQty = quantity; // Already negative or zero
                 }
-                
+
                 // **NEW: Validate against returnable quantity**
                 if (item.OriginalInvoiceItemId.HasValue && negativeQty < 0)
                 {
                     var returnableQty = item.ReturnableQuantity;
                     var absoluteInput = Math.Abs(negativeQty);
-                    
+
                     if (absoluteInput > returnableQty)
                     {
                         // Limit to maximum returnable quantity
@@ -2242,7 +2266,7 @@
         {
             item.Quantity = isReturnCategory ? 0 : 1;
         }
-        
+
         StateHasChanged();
     }
 
@@ -2263,6 +2287,8 @@
 
     private async Task ClearInvoiceItems()
     {
+        if (sale.Items.Count == 0)
+            return;
         // Optional: Add a confirmation dialog if you want to prevent accidental clearing
         bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", clearConfirmationLabel);
         if (!confirmed) return;
@@ -2284,5 +2310,37 @@
         // depending on requirements. For now, we just clear items as requested.
 
         StateHasChanged();
+    }
+
+    private async Task HandleBarcodeSearch(ChangeEventArgs e, SalesInvoiceItem item)
+    {
+        var searchTerm = e.Value?.ToString();
+        item.Barcode = searchTerm ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            barcodeSearchResults.Clear();
+            showBarcodeSearch = false;
+            return;
+        }
+
+        // Search if we have at least 2 characters
+        if (searchTerm.Length >= 2)
+        {
+            try
+            {
+                barcodeSearchResults = await ArticleService.SearchArticlesByBarcodeSuffixAsync(searchTerm);
+                showBarcodeSearch = barcodeSearchResults.Any();
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("console.error", errorSearchingBarcode, ex.Message);
+            }
+        }
+        else
+        {
+            barcodeSearchResults.Clear();
+            showBarcodeSearch = false;
+        }
     }
 }

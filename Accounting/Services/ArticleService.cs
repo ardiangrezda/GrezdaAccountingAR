@@ -74,6 +74,21 @@ namespace Accounting.Services
                 .ToListAsync();
         }
 
+        public async Task<List<Article>> SearchArticlesByBarcodeSuffixAsync(string suffix, int maxResults = 20)
+        {
+            if (string.IsNullOrWhiteSpace(suffix))
+                return new List<Article>();
+
+            return await _context.Articles
+                .Include(a => a.Unit)
+                .Include(a => a.Currency)
+                .Include(a => a.VATTable)
+                .Where(a => a.IsActive && a.Barcode != null && a.Barcode.Contains(suffix))
+                .OrderBy(a => a.Barcode)
+                .Take(maxResults)
+                .ToListAsync();
+        }
+
         public async Task<bool> UpdateArticleAsync(Article article)
         {
             var existingArticle = await _context.Articles.FindAsync(article.Id);
